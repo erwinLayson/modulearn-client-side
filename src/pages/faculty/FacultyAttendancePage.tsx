@@ -34,9 +34,6 @@ export default function FacultyAttendancePage() {
 
   const [activeTab, setActiveTab] = useState<"attendance" | "history">("attendance");
   const [classEnrollments, setClassEnrollments] = useState<EnrollmentListItem[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  const [classSessions, setClassSessions] = useState<AttendanceHistoryItem[]>([]);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSubjectId, setCreateSubjectId] = useState("");
@@ -106,14 +103,12 @@ export default function FacultyAttendancePage() {
     setSelectedClass(assignment);
     setActiveTab("attendance");
     setClassEnrollments([]);
-    setClassSessions([]);
     setPendingEdits(new Map());
     setHasUnsavedChanges(false);
     setHistSubjectFilter("");
     setHistDateFrom("");
     setHistDateTo("");
 
-    setDetailLoading(true);
     try {
       const syRes = await schoolYearApi.getCurrent(user!.school_id!);
       const sy = syRes.data.data;
@@ -122,16 +117,7 @@ export default function FacultyAttendancePage() {
         setClassEnrollments((enrRes.data.data || []).filter(e => e.status === "active"));
       }
     } catch { /* ignore */ }
-    finally { setDetailLoading(false); }
   }, [user]);
-
-  const loadClassSessions = useCallback(async () => {
-    if (!selectedClass) return;
-    try {
-      const res = await attendanceApi.getHistory({ class_id: selectedClass.id, limit: 100 });
-      setClassSessions(res.data.data?.data || []);
-    } catch { setClassSessions([]); }
-  }, [selectedClass]);
 
   const loadAttendanceSpreadsheet = useCallback(async () => {
     if (!selectedClass) return;
@@ -170,10 +156,9 @@ export default function FacultyAttendancePage() {
 
   useEffect(() => {
     if (activeTab === "attendance" && selectedClass) {
-      loadClassSessions();
       loadAttendanceSpreadsheet();
     }
-  }, [activeTab, selectedClass, loadClassSessions, loadAttendanceSpreadsheet]);
+  }, [activeTab, selectedClass, loadAttendanceSpreadsheet]);
 
   const openCreateSession = useCallback(() => {
     setShowCreateModal(true);
@@ -542,9 +527,9 @@ export default function FacultyAttendancePage() {
                         </div>
                       </th>
                     ))}
-                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(16, 163, 74, 0.06)", color: "#16a34a" }} rowSpan={2} verticalAlign="bottom">PRESENT</th>
-                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: "#dc2626" }} rowSpan={2} verticalAlign="bottom">ABSENT</th>
-                    <th className="gb-spreadsheet__th" style={{ minWidth: 80, textAlign: "center" }} rowSpan={2} verticalAlign="bottom">CLASS RATE</th>
+                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(16, 163, 74, 0.06)", color: "#16a34a", verticalAlign: "bottom" }} rowSpan={2}>PRESENT</th>
+                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: "#dc2626", verticalAlign: "bottom" }} rowSpan={2}>ABSENT</th>
+                    <th className="gb-spreadsheet__th" style={{ minWidth: 80, textAlign: "center", verticalAlign: "bottom" }} rowSpan={2}>CLASS RATE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -719,25 +704,22 @@ export default function FacultyAttendancePage() {
                     ))}
                     <th
                       className="gb-spreadsheet__th"
-                      style={{ minWidth: 72, textAlign: "center", background: "rgba(16, 163, 74, 0.06)", color: "#16a34a" }}
+                      style={{ minWidth: 72, textAlign: "center", background: "rgba(16, 163, 74, 0.06)", color: "#16a34a", verticalAlign: "bottom" }}
                       rowSpan={2}
-                      verticalAlign="bottom"
                     >
                       PRESENT
                     </th>
                     <th
                       className="gb-spreadsheet__th"
-                      style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: "#dc2626" }}
+                      style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: "#dc2626", verticalAlign: "bottom" }}
                       rowSpan={2}
-                      verticalAlign="bottom"
                     >
                       ABSENT
                     </th>
                     <th
                       className="gb-spreadsheet__th"
-                      style={{ minWidth: 80, textAlign: "center" }}
+                      style={{ minWidth: 80, textAlign: "center", verticalAlign: "bottom" }}
                       rowSpan={2}
-                      verticalAlign="bottom"
                     >
                       CLASS RATE
                     </th>

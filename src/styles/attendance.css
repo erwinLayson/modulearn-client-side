@@ -1,0 +1,470 @@
+/* ===================== ATTENDANCE HISTORY SPREADSHEET ===================== */
+
+/* Context line under the page title */
+.attn-school-name {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ml-accent-active);
+}
+
+.attn-context {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--ml-text-secondary);
+}
+
+.attn-context strong {
+  color: var(--ml-text);
+  font-weight: 600;
+}
+
+.attn-context-sep {
+  margin: 0 0.5rem;
+  color: var(--ml-text-muted);
+}
+
+/* Filters */
+.attn-filters {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+}
+
+.attn-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.attn-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ml-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+/* Summary strip */
+.attn-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.attn-summary__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 1.125rem;
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.75rem;
+}
+
+.attn-summary__card--rate {
+  background: var(--ml-accent-active);
+  border-color: var(--ml-accent-active);
+}
+
+.attn-summary__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-text-muted);
+}
+
+.attn-summary__card--rate .attn-summary__label,
+.attn-summary__card--rate .attn-summary__value {
+  color: #ffffff;
+}
+
+.attn-summary__value {
+  font-size: 1.375rem;
+  font-weight: 800;
+  color: var(--ml-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.attn-summary__value--present {
+  color: #166534;
+}
+
+.attn-summary__value--absent {
+  color: #991b1b;
+}
+
+/* Sheet panel */
+.attn-sheet-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.attn-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--ml-border);
+  background: var(--ml-surface-alt);
+}
+
+.attn-sheet-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ml-accent-active);
+}
+
+.attn-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted);
+}
+
+.attn-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.attn-legend__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--ml-border);
+}
+
+.attn-legend__swatch--weekend { background: var(--ml-surface-alt); }
+.attn-legend__swatch--high    { background: rgba(22, 101, 52, 0.18); border-color: rgba(22, 101, 52, 0.35); }
+.attn-legend__swatch--low     { background: rgba(153, 27, 27, 0.14); border-color: rgba(153, 27, 27, 0.32); }
+
+.attn-legend__note {
+  font-style: italic;
+}
+
+/* Scroll container */
+.attn-sheet-wrap {
+  overflow: auto;
+  max-height: 70vh;
+  background: var(--ml-surface);
+}
+
+.attn-sheet-wrap::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.attn-sheet-wrap::-webkit-scrollbar-track {
+  background: var(--ml-surface-alt);
+}
+
+.attn-sheet-wrap::-webkit-scrollbar-thumb {
+  background: var(--ml-border);
+  border-radius: 5px;
+}
+
+.attn-sheet-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--ml-text-muted);
+}
+
+/* Table */
+.attn-sheet {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.75rem;
+}
+
+/* Month banner row */
+.attn-sheet__month-row th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ml-accent-active);
+  background: var(--ml-surface-alt);
+  border-bottom: 2px solid var(--ml-accent);
+}
+
+/* Day + label headers */
+.attn-sheet__th {
+  position: sticky;
+  top: 33px;
+  z-index: 5;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ml-text-muted);
+  background: var(--ml-surface-alt);
+  border-bottom: 1px solid var(--ml-border);
+  border-right: 1px solid var(--ml-border);
+  white-space: nowrap;
+}
+
+.attn-sheet__th--day {
+  min-width: 52px;
+  text-align: center;
+}
+
+.attn-sheet__th--weekend {
+  background: #eef3f0;
+  color: var(--ml-text-secondary);
+}
+
+.attn-sheet__dow {
+  display: block;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+}
+
+.attn-sheet__daynum {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--ml-text);
+}
+
+/* Sticky left identification columns (widths sync with COL_CLASS_W / COL_GRADE_W in TSX) */
+.attn-sheet__col--class {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+  border-right: 2px solid var(--ml-border);
+  background: var(--ml-surface);
+}
+
+.attn-sheet__col--grade {
+  position: sticky;
+  left: 150px;
+  z-index: 4;
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+  border-right: 2px solid var(--ml-border);
+  background: var(--ml-surface);
+}
+
+.attn-sheet__col--subject {
+  position: sticky;
+  left: 240px;
+  z-index: 4;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+  border-right: 2px solid var(--ml-border);
+  background: var(--ml-surface);
+}
+
+.attn-sheet__th.attn-sheet__col--class,
+.attn-sheet__th.attn-sheet__col--grade,
+.attn-sheet__th.attn-sheet__col--subject {
+  z-index: 7;
+  background: var(--ml-surface-alt);
+  text-align: left;
+}
+
+/* Body cells */
+.attn-sheet__td {
+  padding: 0;
+  border-bottom: 1px solid var(--ml-border);
+  border-right: 1px solid var(--ml-border);
+  background: var(--ml-surface);
+}
+
+.attn-sheet__td--weekend {
+  background: #f6f9f7;
+}
+
+.attn-sheet__row:hover .attn-sheet__td--subject,
+.attn-sheet__row:hover .attn-sheet__td--muted {
+  background: var(--ml-surface-alt);
+}
+
+.attn-sheet__td--subject {
+  padding: 0.375rem 0.625rem;
+  font-weight: 600;
+  color: var(--ml-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attn-sheet__td--muted {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Classroom group band */
+.attn-sheet__group-row .attn-sheet__td {
+  border-bottom: 1px solid var(--ml-accent);
+}
+
+.attn-sheet__td--group {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-accent-active);
+  background: #eaf3ee !important;
+  white-space: nowrap;
+}
+
+.attn-sheet__group-spacer {
+  background: #eaf3ee;
+}
+
+/* Attendance cells */
+.attn-sheet__cell {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.25rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ml-text-secondary);
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.attn-sheet__cell:hover {
+  background: rgba(22, 132, 91, 0.1);
+  color: var(--ml-accent-active);
+}
+
+.attn-sheet__cell--high {
+  background: rgba(22, 101, 52, 0.08);
+  color: #166534;
+  font-weight: 600;
+}
+
+.attn-sheet__cell--low {
+  background: rgba(153, 27, 27, 0.07);
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.attn-sheet__cell--high:hover { background: rgba(22, 101, 52, 0.16); }
+.attn-sheet__cell--low:hover  { background: rgba(153, 27, 27, 0.14); }
+
+/* Hover tooltip (pure CSS, no JS) */
+.attn-sheet__cell[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  min-width: 180px;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  background: #1f2d28;
+  color: #f0f5f2;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  white-space: pre-line;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease 0.25s;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.attn-sheet__cell[data-tip]:hover::after {
+  opacity: 1;
+}
+
+/* Tooltip stays readable in the first rows: flip below when near the top */
+.attn-sheet__cell[data-tip]:first-child::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+/* Detail modal body */
+.attn-detail {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.5rem 1.25rem;
+}
+
+.attn-detail__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4375rem 0;
+  border-bottom: 1px dashed var(--ml-border);
+}
+
+.attn-detail__row--rate {
+  border-bottom: none;
+  margin-top: 0.25rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--ml-border);
+}
+
+.attn-detail__label {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+}
+
+.attn-detail__value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ml-text);
+  text-align: right;
+}
+
+.attn-detail__row--rate .attn-detail__value {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+/* Skeleton shimmer */
+.attn-skel {
+  display: inline-block;
+  border-radius: 0.25rem;
+  background: linear-gradient(90deg, var(--ml-surface-alt) 25%, #e3ece7 50%, var(--ml-surface-alt) 75%);
+  background-size: 200% 100%;
+  animation: attn-skel-pulse 1.4s ease infinite;
+}
+
+.attn-skel--text {
+  height: 10px;
+}
+
+.attn-skel--chip {
+  width: 38px;
+  height: 12px;
+}
+
+@keyframes attn-skel-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+

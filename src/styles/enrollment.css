@@ -1,0 +1,716 @@
+/* =================== ENROLLMENT PAGE (wizard layout) =================== */
+
+/* ---------- Stepper ---------- */
+.enroll-stepper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--ml-shadow);
+}
+
+.enroll-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: default;
+}
+
+.enroll-step--clickable { cursor: pointer; }
+.enroll-step--locked { opacity: 0.55; cursor: not-allowed; }
+
+.enroll-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 2px solid var(--ml-border);
+  background: var(--ml-surface);
+  color: var(--ml-text-muted);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.enroll-step--active .enroll-step-num {
+  border-color: var(--ml-accent);
+  background: var(--ml-accent);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--ml-focus-ring);
+}
+
+.enroll-step--done .enroll-step-num {
+  border-color: var(--ml-accent);
+  background: var(--ml-accent);
+  color: #fff;
+}
+
+.enroll-step-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ml-text-muted);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.enroll-step--active .enroll-step-label {
+  color: var(--ml-accent);
+  font-weight: 600;
+}
+
+.enroll-step--done .enroll-step-label {
+  color: var(--ml-text-secondary);
+}
+
+.enroll-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--ml-border);
+  margin: 0 0.625rem;
+  min-width: 1.5rem;
+  transition: background 0.2s;
+}
+
+.enroll-step-line--done {
+  background: var(--ml-accent);
+}
+
+/* ---------- Two-panel layout ---------- */
+.enroll-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.enroll-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.enroll-aside {
+  position: sticky;
+  top: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .enroll-layout { grid-template-columns: 1fr; }
+  .enroll-aside { position: static; order: -1; }
+}
+
+/* ---------- Step panels ---------- */
+.enroll-panel {
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: opacity 0.2s;
+}
+
+.enroll-panel--student {
+  overflow: visible;
+}
+
+.enroll-panel--locked { opacity: 0.6; }
+
+.enroll-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--ml-border);
+  background: linear-gradient(to bottom, var(--ml-surface), var(--ml-surface-alt));
+}
+
+.enroll-panel-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--ml-primary);
+  color: var(--ml-on-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.enroll-panel-num--plain {
+  background: var(--ml-surface-alt);
+  color: var(--ml-accent);
+}
+
+.enroll-panel-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ml-text);
+}
+
+.enroll-panel-sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ml-text-secondary);
+}
+
+.enroll-panel-body {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.enroll-panel-locked-msg {
+  font-size: 0.8125rem;
+  color: var(--ml-text-muted);
+  text-align: center;
+  padding: 0.75rem 0;
+}
+
+/* ---------- Avatars ---------- */
+.enroll-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  user-select: none;
+}
+
+.enroll-avatar--sm {
+  width: 1.875rem;
+  height: 1.875rem;
+  font-size: 0.6875rem;
+}
+
+.enroll-avatar--1 { background: #16845b; }
+.enroll-avatar--2 { background: #0e7490; }
+.enroll-avatar--3 { background: #7c3aed; }
+.enroll-avatar--4 { background: #b45309; }
+.enroll-avatar--5 { background: #be185d; }
+.enroll-avatar--6 { background: #4d7c0f; }
+
+/* ---------- Student search ---------- */
+.enroll-search-wrap {
+  position: relative;
+  max-width: 26rem;
+}
+
+.enroll-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ml-text-muted);
+  pointer-events: none;
+}
+
+.enroll-search-input {
+  padding-left: 2.25rem;
+}
+
+.enroll-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.enroll-search-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--ml-border);
+}
+
+.enroll-search-item:last-child { border-bottom: none; }
+.enroll-search-item:hover,
+.enroll-search-item--hl { background: var(--ml-surface-alt); }
+
+.enroll-search-item-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ml-text);
+}
+
+.enroll-search-item-meta {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+}
+
+.enroll-search-empty,
+.enroll-search-loading {
+  padding: 0.875rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--ml-text-muted);
+}
+
+/* ---------- Selected student chip ---------- */
+.enroll-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  background: var(--ml-surface-alt);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.625rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.enroll-chip-name {
+  font-weight: 600;
+  color: var(--ml-text);
+}
+
+.enroll-chip-meta {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+}
+
+.enroll-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: none;
+  background: transparent;
+  color: var(--ml-text-muted);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  margin-left: 0.125rem;
+  transition: all 0.15s;
+}
+
+.enroll-chip-remove:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ---------- Class cards ---------- */
+.enroll-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.enroll-class-card {
+  position: relative;
+  padding: 0.875rem 1rem;
+  background: var(--ml-surface);
+  border: 1.5px solid var(--ml-border);
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.enroll-class-card:hover {
+  border-color: var(--ml-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.enroll-class-card:focus-visible {
+  outline: none;
+  border-color: var(--ml-accent);
+  box-shadow: 0 0 0 3px var(--ml-focus-ring);
+}
+
+.enroll-class-card--selected {
+  border-color: var(--ml-accent);
+  box-shadow: 0 0 0 2px var(--ml-focus-ring);
+  background: rgba(22, 132, 91, 0.03);
+}
+
+.enroll-class-check {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: var(--ml-accent);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(22, 132, 91, 0.4);
+}
+
+.enroll-grade-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 2.5rem;
+  border: 1.5px solid var(--ml-border);
+  border-radius: 0.5rem;
+  background: var(--ml-card);
+  color: var(--ml-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.enroll-grade-btn:hover {
+  border-color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.04);
+}
+
+.enroll-grade-btn--selected {
+  border-color: var(--ml-accent);
+  background: var(--ml-accent);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(22, 132, 91, 0.3);
+}
+
+.enroll-class-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ml-text);
+  margin-bottom: 0.375rem;
+  padding-right: 1rem;
+}
+
+.enroll-class-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  margin-bottom: 0.375rem;
+}
+
+.enroll-class-info {
+  font-size: 0.75rem;
+  color: var(--ml-text-secondary);
+}
+
+.enroll-class-cap {
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted);
+  margin-top: 0.125rem;
+}
+
+/* ---------- Subject picker ---------- */
+.enroll-mini-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+}
+
+.enroll-subject-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ml-text-secondary);
+}
+
+.enroll-mini-btn {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.08);
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.enroll-mini-btn:hover {
+  background: rgba(22, 132, 91, 0.15);
+}
+
+.enroll-subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.5rem;
+}
+
+.enroll-subject-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--ml-surface);
+  border: 1.5px solid var(--ml-border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.enroll-subject-card:hover {
+  border-color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.02);
+}
+
+.enroll-subject-card--selected {
+  border-color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.05);
+}
+
+.enroll-subject-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.enroll-subject-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  border: 1.5px solid var(--ml-border);
+  border-radius: 0.25rem;
+  color: transparent;
+  transition: all 0.15s;
+  background: var(--ml-surface);
+}
+
+.enroll-subject-card--selected .enroll-subject-check {
+  background: var(--ml-accent);
+  border-color: var(--ml-accent);
+  color: #fff;
+}
+
+.enroll-subject-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ml-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enroll-subject-teacher {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Summary sidebar ---------- */
+.enroll-aside-card {
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.75rem;
+  padding: 1.125rem 1.25rem;
+  box-shadow: var(--ml-shadow);
+}
+
+.enroll-aside-title {
+  margin: 0 0 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--ml-text);
+}
+
+.enroll-aside-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px dashed var(--ml-border);
+}
+
+.enroll-aside-row:first-of-type {
+  padding-top: 0;
+}
+
+.enroll-aside-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-text-muted);
+}
+
+.enroll-aside-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ml-text);
+}
+
+.enroll-aside-value--empty {
+  color: var(--ml-text-muted);
+  font-weight: 400;
+}
+
+.enroll-aside-hint {
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted);
+}
+
+.enroll-aside-student,
+.enroll-aside-class {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enroll-aside-class {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+/* Capacity meter */
+.enroll-cap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.enroll-cap-bar {
+  flex: 1;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--ml-surface-alt);
+  border: 1px solid var(--ml-border);
+  overflow: hidden;
+}
+
+.enroll-cap-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--ml-accent);
+  transition: width 0.3s;
+}
+
+.enroll-cap-fill--warn { background: #d97706; }
+.enroll-cap-fill--full { background: #dc2626; }
+
+.enroll-cap-text {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ml-text-secondary);
+  white-space: nowrap;
+}
+
+/* Hints */
+.enroll-hints {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.875rem 0.75rem 1.75rem;
+  background: rgba(217, 119, 6, 0.06);
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  color: #92400e;
+}
+
+.enroll-hints li + li { margin-top: 0.25rem; }
+
+/* CTA */
+.enroll-btn-full {
+  width: 100%;
+  margin-top: 0.875rem;
+}
+
+/* ---------- Roster ---------- */
+.enroll-roster-student {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.enroll-roster-email {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+}
+
+.enroll-more {
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted);
+  font-weight: 500;
+}
+
+.enroll-col-subjects { min-width: 10rem; }
+
+.enroll-status-select {
+  width: auto;
+  min-width: 7.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+.enroll-status-select--active { color: #065f46; border-color: #a7f3d0; background: #ecfdf5; }
+.enroll-status-select--dropped { color: #991b1b; border-color: #fecaca; background: #fef2f2; }
+.enroll-status-select--completed { color: #1e40af; border-color: #bfdbfe; background: #eff6ff; }
+
+/* ---------- import modal drop zone ---------- */
+.mgmt-drop-zone {
+  border: 2px dashed var(--ml-border);
+  border-radius: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: var(--ml-surface);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.mgmt-drop-zone:hover {
+  border-color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.03);
+}
+
+.mgmt-drop-zone--active {
+  border-color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.08);
+  box-shadow: 0 0 0 4px var(--ml-focus-ring);
+}
+
+.mgmt-drop-zone:focus {
+  outline: none;
+  border-color: var(--ml-accent);
+  box-shadow: 0 0 0 4px var(--ml-focus-ring);
+}
+
+.mgmt-drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+

@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { enrollmentApi, type EnrollmentClass } from "../../api/enrollments";
+import { enrollmentApi } from "../../api/enrollments";
 import { classApi, type ScheduleItem } from "../../api/classes";
 import { schoolYearApi } from "../../api/school-years";
 

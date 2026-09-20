@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* ============================================================
+   ModuLearn Design Tokens — 60 / 30 / 10
+   60 %  light surfaces   -> page bg very light mint, cards white
+   30 %  deep forest green-> structure, headers, brand panels
+   10 %  emerald green    -> CTAs, links, accents, focus rings
+   Single source of truth — change a color here to re-theme.
+   ============================================================ */
+:root {
+  /* 60 % — white & mint surfaces */
+  --ml-page-bg: #eaf8f1;
+  --ml-surface: #ffffff;
+  --ml-surface-alt: #e4f4ec;
+  --ml-card-bg: #ffffff;
+  --ml-border: #d7e7df;
+
+  /* 30 % — deep forest green structure */
+  --ml-primary: #18372e;
+  --ml-primary-hover: #1f4739;
+  --ml-primary-deep: #0e2a21;
+  --ml-on-primary: #ffffff;
+  --ml-on-primary-soft: #e4f4ec;
+
+  /* 10 % — emerald green accent */
+  --ml-accent: #16845b;
+  --ml-accent-hover: #1e9a6d;
+  --ml-accent-active: #116a46;
+  --ml-glow: rgba(22, 132, 91, 0.4);
+  --ml-focus-ring: rgba(22, 132, 91, 0.3);
+
+  /* text */
+  --ml-text: #18372e;
+  --ml-label: #18372e;
+  --ml-text-secondary: #607a82;
+  --ml-text-muted: #8aa99f;
+
+  /* shadows */
+  --ml-shadow: 0 20px 25px -5px rgba(14, 42, 33, 0.08), 0 8px 10px -6px rgba(14, 42, 33, 0.06);
+  --ml-shadow-accent: 0 10px 15px -3px rgba(22, 132, 91, 0.35);
+}
+

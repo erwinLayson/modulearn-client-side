@@ -1,0 +1,37 @@
+/* ---------- buttons ---------- */
+.mgmt-btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.mgmt-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mgmt-btn--primary {
+  background: var(--ml-accent);
+  color: #fff;
+}
+
+.mgmt-btn--primary:hover:not(:disabled) {
+  background: var(--ml-accent-active);
+}
+
+.mgmt-btn--ghost {
+  background: transparent;
+  color: var(--ml-text-secondary);
+  border: 1px solid var(--ml-border);
+}
+
+.mgmt-btn--ghost:hover {
+  background: var(--ml-surface-alt);
+}
+

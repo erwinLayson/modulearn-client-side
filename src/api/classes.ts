@@ -175,6 +175,38 @@ export interface AttendanceHistoryFilters {
   limit?: number;
 }
 
+export interface SchoolAttendanceMatrixItem {
+  class_id: string;
+  class_name: string;
+  section: string | null;
+  grade_level: string | null;
+  subject_id: string;
+  subject_name: string;
+  teacher_id: string | null;
+  teacher_name: string | null;
+  total_enrolled: number;
+  attendance_date: string; // "YYYY-MM-DD"
+  present_count: number;
+  absent_count: number;
+  marked_count: number;
+}
+
+export interface SchoolAttendanceMatrixResponse {
+  school_year_name: string | null;
+  date_from: string;
+  date_to: string;
+  data: SchoolAttendanceMatrixItem[];
+}
+
+export interface SchoolAttendanceMatrixFilters {
+  year?: number;
+  month?: number;
+  class_id?: string;
+  subject_id?: string;
+  teacher_id?: string;
+  grade_level?: string;
+}
+
 export interface SchoolAttendanceReportFilters {
   class_id?: string;
   subject_id?: string;
@@ -260,6 +292,9 @@ export const attendanceApi = {
 
   getSchoolReport: (schoolId: number, filters: SchoolAttendanceReportFilters = {}) =>
     apiClient.get<{ data: PaginatedResponse<SchoolAttendanceReportItem> }>(`/attendance/school/${schoolId}/report`, { params: filters }),
+
+  getSchoolMatrix: (schoolId: number, filters: SchoolAttendanceMatrixFilters = {}) =>
+    apiClient.get<{ data: SchoolAttendanceMatrixResponse }>(`/attendance/school/${schoolId}/matrix`, { params: filters }),
 
   getSchoolAttendance: (schoolId: number, date: string, subjectId?: string) =>
     apiClient.get<{ data: AttendanceRecord[] }>(`/attendance/school/${schoolId}`, { params: { date, subject_id: subjectId } }),

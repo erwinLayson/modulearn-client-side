@@ -1,0 +1,194 @@
+/* ---------- schedule picker ---------- */
+.schedule-picker {
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  max-width: inherit;
+  overflow-x: auto;
+}
+
+.schedule-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .schedule-picker-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .schedule-picker-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.schedule-picker-day {
+  background: var(--ml-surface-alt);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-picker-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ml-border);
+}
+
+.schedule-picker-day-label {
+  font-weight: 600;
+  color: var(--ml-text);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.schedule-picker-day-count {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+  background: var(--ml-surface);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.schedule-picker-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+}
+
+.schedule-picker-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.schedule-picker-slot-time {
+  font-weight: 500;
+  color: var(--ml-text);
+  white-space: nowrap;
+}
+
+.schedule-picker-slot-room {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+  background: var(--ml-primary);
+  color: var(--ml-on-primary-soft);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+.schedule-picker-slot-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.schedule-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  background: transparent;
+  color: var(--ml-text-muted);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+
+.schedule-picker-btn:hover {
+  background: var(--ml-border);
+  color: var(--ml-text);
+}
+
+.schedule-picker-btn--save {
+  color: var(--ml-accent);
+}
+
+.schedule-picker-btn--save:hover {
+  background: rgba(22, 132, 91, 0.1);
+  color: var(--ml-accent-active);
+}
+
+.schedule-picker-btn--delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.schedule-picker-add-btn {
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px dashed var(--ml-border);
+  background: transparent;
+  color: var(--ml-text-muted);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.schedule-picker-add-btn:hover {
+  border-color: var(--ml-accent);
+  color: var(--ml-accent);
+  background: rgba(22, 132, 91, 0.05);
+}
+
+.schedule-picker-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.schedule-picker-edit-form > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.schedule-picker-input {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--ml-border);
+  border-radius: 0.375rem;
+  background: var(--ml-surface);
+  color: var(--ml-text);
+  font-size: 0.8125rem;
+}
+
+.schedule-picker-input--room {
+  width: 100%;
+}
+
+.schedule-picker-edit-actions {
+  display: flex;
+  gap: 0.375rem;
+  justify-content: flex-end;
+}
+
+.schedule-picker-empty {
+  text-align: center;
+  color: var(--ml-text-muted);
+  padding: 2rem;
+  font-size: 0.875rem;
+}
+

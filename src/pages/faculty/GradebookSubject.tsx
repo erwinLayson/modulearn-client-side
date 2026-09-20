@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory } from "../../api/gradebook";
 import Toast from "../../components/Toast";
 
@@ -13,16 +12,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   attendance: "Attendance",
 };
 
-const CATEGORY_SHORT: Record<string, string> = {
-  activities: "ACT",
-  quizzes: "QUIZ",
-  exams: "EXAM",
-  attendance: "ATT",
-};
-
 const CATEGORY_ORDER: GradingCategory[] = ["activities", "quizzes", "exams", "attendance"];
 
 const PASS_THRESHOLD = 75;
+
+/** Item shape as returned inside GradesForSubjectResponse (subset of GradeItem). */
+type GradeSheetItem = GradesForSubjectResponse["items"][number];
 
 interface EnrichedStudent {
   student_id: string;
@@ -37,21 +32,19 @@ interface EnrichedStudent {
 
 export default function GradebookSubject() {
   const { classId, subjectId } = useParams<{ classId: string; subjectId: string }>();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  const [weights, setWeights] = useState<{ category: GradingCategory; weight: number }[]>([]);
   const [editWeights, setEditWeights] = useState<Record<string, number>>({});
   const [weightsSaving, setWeightsSaving] = useState(false);
   const [weightsChanged, setWeightsChanged] = useState(false);
 
   const [items, setItems] = useState<GradeItem[]>([]);
   const [showItemModal, setShowItemModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<GradeItem | null>(null);
+  const [editingItem, setEditingItem] = useState<GradeSheetItem | null>(null);
   const [itemForm, setItemForm] = useState({ title: "", category: "activities" as GradeItemCategory, max_score: 100, due_date: "" });
   const [itemSaving, setItemSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -72,7 +65,6 @@ export default function GradebookSubject() {
         gradebookApi.getGrades(classId, subjectId),
       ]);
       const w = weightsRes.data.data || [];
-      setWeights(w);
       const wMap: Record<string, number> = {};
       for (const cat of CATEGORY_ORDER) {
         const found = w.find(x => x.category === cat);
@@ -99,8 +91,8 @@ export default function GradebookSubject() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const groupedItems = useMemo(() => {
-    if (!gradeData) return {} as Record<GradeItemCategory, GradeItem[]>;
-    const groups: Record<string, GradeItem[]> = { activities: [], quizzes: [], exams: [] };
+    if (!gradeData) return {} as Record<GradeItemCategory, GradeSheetItem[]>;
+    const groups: Record<string, GradeSheetItem[]> = { activities: [], quizzes: [], exams: [] };
     for (const item of gradeData.items) {
       if (!groups[item.category]) groups[item.category] = [];
       groups[item.category].push(item);
@@ -143,7 +135,6 @@ export default function GradebookSubject() {
     try {
       const weightArray = Object.entries(editWeights).map(([category, weight]) => ({ category, weight }));
       await gradebookApi.updateWeights(classId, subjectId, weightArray);
-      setWeights(weightArray.map(w => ({ category: w.category as GradingCategory, weight: w.weight })));
       setWeightsChanged(false);
       setToast({ message: "Grading weights saved", type: "success" });
     } catch (err: any) {
@@ -252,7 +243,7 @@ export default function GradebookSubject() {
     setShowItemModal(true);
   };
 
-  const openEditItem = (item: GradeItem, e: React.MouseEvent) => {
+  const openEditItem = (item: GradeSheetItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingItem(item);
     setItemForm({
