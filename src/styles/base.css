@@ -130,7 +130,7 @@
 .role-btn--active {
   border-color: var(--ml-accent);
   background: var(--ml-accent);
-  color: #fff;
+  color: var(--ml-on-primary);
 }
 
 /* ---------- actions & links ---------- */
@@ -141,7 +141,7 @@
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--ml-on-primary);
   transition: all 0.2s;
 }
 .auth-btn:hover {
@@ -197,7 +197,7 @@
   border: 1px solid var(--ml-border);
   background: var(--ml-card-bg);
   color: var(--ml-text-secondary);
-  box-shadow: 0 1px 3px rgba(14, 42, 33, 0.06);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   transition: all 0.2s;
 }
 .auth-back:hover {

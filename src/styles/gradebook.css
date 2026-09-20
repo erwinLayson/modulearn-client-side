@@ -13,10 +13,10 @@
   height: 100%;
   transition: width 0.3s ease;
 }
-.gb-weight-bar__segment--activities { background: #2563eb; }
-.gb-weight-bar__segment--quizzes    { background: #7c3aed; }
-.gb-weight-bar__segment--exams      { background: #dc2626; }
-.gb-weight-bar__segment--attendance { background: #16a34a; }
+.gb-weight-bar__segment--activities { background: var(--ml-accent); }
+.gb-weight-bar__segment--quizzes    { background: var(--ml-primary); }
+.gb-weight-bar__segment--exams      { background: var(--ml-error); }
+.gb-weight-bar__segment--attendance { background: var(--ml-success); }
 
 /* Weight input group */
 .gb-weight-input {
@@ -45,10 +45,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.gb-weight-input__dot--activities { background: #2563eb; }
-.gb-weight-input__dot--quizzes    { background: #7c3aed; }
-.gb-weight-input__dot--exams      { background: #dc2626; }
-.gb-weight-input__dot--attendance { background: #16a34a; }
+.gb-weight-input__dot--activities { background: var(--ml-accent); }
+.gb-weight-input__dot--quizzes    { background: var(--ml-primary); }
+.gb-weight-input__dot--exams      { background: var(--ml-error); }
+.gb-weight-input__dot--attendance { background: var(--ml-success); }
 .gb-weight-input input {
   width: 64px;
   text-align: center;
@@ -82,10 +82,10 @@
   font-weight: 600;
   text-transform: capitalize;
 }
-.gb-cat-badge--activities { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.gb-cat-badge--quizzes    { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
-.gb-cat-badge--exams      { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-.gb-cat-badge--attendance { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.gb-cat-badge--activities { background: var(--ml-info-bg); color: #1d4ed8; border: 1px solid var(--ml-info-border); }
+.gb-cat-badge--quizzes    { background: #EEF2FF; color: var(--ml-primary); border: 1px solid #C7D2FE; }
+.gb-cat-badge--exams      { background: var(--ml-error-bg); color: #991b1b; border: 1px solid var(--ml-error-border); }
+.gb-cat-badge--attendance { background: var(--ml-success-bg); color: #166534; border: 1px solid var(--ml-success-border); }
 
 .gb-cat-badge__dot {
   width: 6px;
@@ -108,11 +108,11 @@
 }
 .gb-item-row:hover {
   border-color: var(--ml-accent);
-  box-shadow: 0 2px 8px rgba(14, 42, 33, 0.06);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 .gb-item-row--selected {
   border-color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.04);
+  background: rgba(13, 110, 253, 0.04);
   box-shadow: 0 0 0 3px var(--ml-focus-ring);
 }
 .gb-item-row__info {
@@ -150,9 +150,9 @@
   gap: 0.375rem;
   padding: 0.375rem 0.75rem;
   border-radius: 9999px;
-  background: #fffbeb;
+  background: var(--ml-warning-bg);
   color: #92400e;
-  border: 1px solid #fde68a;
+  border: 1px solid var(--ml-warning-border);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -220,7 +220,7 @@
   transition: box-shadow 0.2s;
 }
 .gb-subject-panel:hover {
-  box-shadow: 0 4px 12px rgba(14, 42, 33, 0.06);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 .gb-subject-header {
   display: flex;
@@ -241,7 +241,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(22, 132, 91, 0.1);
+  background: rgba(13, 110, 253, 0.1);
   color: var(--ml-accent);
 }
 .gb-subject-header__info {
@@ -470,19 +470,19 @@
 }
 
 .gb-spreadsheet__th--category-activities {
-  background: #eff6ff;
+  background: var(--ml-info-bg);
   color: #1d4ed8;
-  border-left-color: #2563eb;
+  border-left-color: var(--ml-accent);
 }
 .gb-spreadsheet__th--category-quizzes {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-left-color: #7c3aed;
+  background: #EEF2FF;
+  color: var(--ml-primary);
+  border-left-color: var(--ml-primary);
 }
 .gb-spreadsheet__th--category-exams {
-  background: #fef2f2;
+  background: var(--ml-error-bg);
   color: #991b1b;
-  border-left-color: #dc2626;
+  border-left-color: var(--ml-error);
 }
 
 .gb-spreadsheet__cat-label {
@@ -498,9 +498,9 @@
   border-radius: 50%;
 }
 
-.gb-spreadsheet__cat-dot--activities { background: #2563eb; }
-.gb-spreadsheet__cat-dot--quizzes    { background: #7c3aed; }
-.gb-spreadsheet__cat-dot--exams      { background: #dc2626; }
+.gb-spreadsheet__cat-dot--activities { background: var(--ml-accent); }
+.gb-spreadsheet__cat-dot--quizzes    { background: var(--ml-primary); }
+.gb-spreadsheet__cat-dot--exams      { background: var(--ml-error); }
 
 /* Item column headers */
 .gb-spreadsheet__th--item {
@@ -514,9 +514,9 @@
   padding: 0.375rem 0.5rem;
 }
 
-.gb-spreadsheet__th--item-activities { border-top: 3px solid #2563eb; }
-.gb-spreadsheet__th--item-quizzes    { border-top: 3px solid #7c3aed; }
-.gb-spreadsheet__th--item-exams      { border-top: 3px solid #dc2626; }
+.gb-spreadsheet__th--item-activities { border-top: 3px solid var(--ml-accent); }
+.gb-spreadsheet__th--item-quizzes    { border-top: 3px solid var(--ml-primary); }
+.gb-spreadsheet__th--item-exams      { border-top: 3px solid var(--ml-error); }
 
 .gb-spreadsheet__item-header {
   display: flex;
@@ -576,13 +576,13 @@
 }
 
 .gb-spreadsheet__item-action--edit:hover {
-  background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
+  background: rgba(13, 110, 253, 0.12);
+  color: var(--ml-accent);
 }
 
 .gb-spreadsheet__item-action--delete:hover {
   background: rgba(220, 38, 38, 0.12);
-  color: #dc2626;
+  color: var(--ml-error);
 }
 
 /* Subtotal headers */
@@ -596,9 +596,9 @@
   padding: 0.375rem 0.5rem;
 }
 
-.gb-spreadsheet__th--subtotal-activities { background: #eff6ff; color: #1d4ed8; }
-.gb-spreadsheet__th--subtotal-quizzes    { background: #f5f3ff; color: #6d28d9; }
-.gb-spreadsheet__th--subtotal-exams      { background: #fef2f2; color: #991b1b; }
+.gb-spreadsheet__th--subtotal-activities { background: var(--ml-info-bg); color: #1d4ed8; }
+.gb-spreadsheet__th--subtotal-quizzes    { background: #EEF2FF; color: var(--ml-primary); }
+.gb-spreadsheet__th--subtotal-exams      { background: var(--ml-error-bg); color: #991b1b; }
 
 /* Summary column headers */
 .gb-spreadsheet__th--total-header,
@@ -611,10 +611,10 @@
   border-bottom: 2px solid var(--ml-border);
 }
 
-.gb-spreadsheet__th--total-header      { background: #f0fdf4; color: #166534; }
-.gb-spreadsheet__th--attendance-header { background: #f0fdf4; color: #166534; }
-.gb-spreadsheet__th--final-header      { background: #f0fdf4; color: #166534; }
-.gb-spreadsheet__th--remarks-header    { background: #f0fdf4; color: #166534; }
+.gb-spreadsheet__th--total-header      { background: var(--ml-success-bg); color: #166534; }
+.gb-spreadsheet__th--attendance-header { background: var(--ml-success-bg); color: #166534; }
+.gb-spreadsheet__th--final-header      { background: var(--ml-success-bg); color: #166534; }
+.gb-spreadsheet__th--remarks-header    { background: var(--ml-success-bg); color: #166534; }
 
 /* Data rows */
 .gb-spreadsheet__row {
@@ -626,11 +626,11 @@
 }
 
 .gb-spreadsheet__row--selected {
-  background: rgba(22, 132, 91, 0.06);
+  background: rgba(13, 110, 253, 0.06);
 }
 
 .gb-spreadsheet__row--selected:hover {
-  background: rgba(22, 132, 91, 0.1);
+  background: rgba(13, 110, 253, 0.1);
 }
 
 /* Table cells */
@@ -731,7 +731,7 @@
 }
 
 .gb-spreadsheet__td--subtotal-activities { background: rgba(239, 246, 255, 0.5); }
-.gb-spreadsheet__td--subtotal-quizzes    { background: rgba(245, 243, 255, 0.5); }
+.gb-spreadsheet__td--subtotal-quizzes    { background: rgba(238, 242, 255, 0.5); }
 .gb-spreadsheet__td--subtotal-exams      { background: rgba(254, 242, 242, 0.5); }
 
 .gb-spreadsheet__subtotal-text {
@@ -798,11 +798,11 @@
 }
 
 .gb-spreadsheet__final-text--pass {
-  color: #16a34a;
+  color: var(--ml-success);
 }
 
 .gb-spreadsheet__final-text--fail {
-  color: #dc2626;
+  color: var(--ml-error);
 }
 
 /* Remarks column */
@@ -823,15 +823,15 @@
 }
 
 .gb-spreadsheet__remarks-badge--pass {
-  background: #dcfce7;
+  background: var(--ml-success-bg);
   color: #166534;
-  border: 1px solid #bbf7d0;
+  border: 1px solid var(--ml-success-border);
 }
 
 .gb-spreadsheet__remarks-badge--fail {
-  background: #fef2f2;
+  background: var(--ml-error-bg);
   color: #991b1b;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--ml-error-border);
 }
 
 /* Attendance cell input */
@@ -852,16 +852,16 @@
 }
 .att-cell-input:focus {
   border-color: var(--ml-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
   background: #fff;
 }
 .att-cell-input--dirty {
-  border-color: #d97706;
-  background: rgba(217, 119, 6, 0.06);
+  border-color: var(--ml-warning);
+  background: rgba(245, 158, 11, 0.06);
 }
 .att-cell-input--dirty:focus {
-  border-color: #d97706;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+  border-color: var(--ml-warning);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
 }
 .att-cell-input--present {
   color: #166534;

@@ -125,13 +125,13 @@
 }
 
 .schedule-picker-btn--save:hover {
-  background: rgba(22, 132, 91, 0.1);
+  background: rgba(13, 110, 253, 0.1);
   color: var(--ml-accent-active);
 }
 
 .schedule-picker-btn--delete:hover {
   background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
+  color: var(--ml-error);
 }
 
 .schedule-picker-add-btn {
@@ -150,7 +150,7 @@
 .schedule-picker-add-btn:hover {
   border-color: var(--ml-accent);
   color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.05);
+  background: rgba(13, 110, 253, 0.05);
 }
 
 .schedule-picker-edit-form {

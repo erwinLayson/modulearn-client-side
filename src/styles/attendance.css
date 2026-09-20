@@ -223,7 +223,7 @@
 }
 
 .attn-sheet__th--weekend {
-  background: #eef3f0;
+  background: #EEF2FF;
   color: var(--ml-text-secondary);
 }
 
@@ -291,7 +291,7 @@
 }
 
 .attn-sheet__td--weekend {
-  background: #f6f9f7;
+  background: #F1F5F9;
 }
 
 .attn-sheet__row:hover .attn-sheet__td--subject,
@@ -329,12 +329,12 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ml-accent-active);
-  background: #eaf3ee !important;
+  background: var(--ml-navy-light) !important;
   white-space: nowrap;
 }
 
 .attn-sheet__group-spacer {
-  background: #eaf3ee;
+  background: var(--ml-navy-light);
 }
 
 /* Attendance cells */
@@ -353,7 +353,7 @@
 }
 
 .attn-sheet__cell:hover {
-  background: rgba(22, 132, 91, 0.1);
+  background: rgba(13, 110, 253, 0.1);
   color: var(--ml-accent-active);
 }
 
@@ -383,8 +383,8 @@
   min-width: 180px;
   padding: 0.5rem 0.625rem;
   border-radius: 0.5rem;
-  background: #1f2d28;
-  color: #f0f5f2;
+  background: var(--ml-primary);
+  color: #FFFFFF;
   font-size: 0.6875rem;
   line-height: 1.5;
   white-space: pre-line;
@@ -449,7 +449,7 @@
 .attn-skel {
   display: inline-block;
   border-radius: 0.25rem;
-  background: linear-gradient(90deg, var(--ml-surface-alt) 25%, #e3ece7 50%, var(--ml-surface-alt) 75%);
+  background: linear-gradient(90deg, var(--ml-surface-alt) 25%, #D6E4FF 50%, var(--ml-surface-alt) 75%);
   background-size: 200% 100%;
   animation: attn-skel-pulse 1.4s ease infinite;
 }

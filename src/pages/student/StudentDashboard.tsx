@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { enrollmentApi, type StudentEnrollment } from "../../api/enrollments";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
 import { attendanceApi, type StudentSubjectAttendance, type StudentAttendanceDetail } from "../../api/classes";
+import { COLORS } from "../../constant/colors";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -140,7 +141,7 @@ export default function StudentDashboard() {
                   <div className="mgmt-card-top mgmt-card-top--blue" />
                   <div className="mgmt-card-body">
                     <div className="mgmt-card-header">
-                      <div className="mgmt-card-icon" style={{ background: "rgba(37, 99, 235, 0.1)", color: "#2563eb" }}>
+                      <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
                         <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                         </svg>
@@ -162,15 +163,15 @@ export default function StudentDashboard() {
                       </div>
                       <div className="mgmt-card-detail">
                         <span className="mgmt-card-detail-label">Present</span>
-                        <span className="mgmt-card-detail-value" style={{ color: "#10b981" }}>{subject.present_count}</span>
+                        <span className="mgmt-card-detail-value" style={{ color: COLORS.present }}>{subject.present_count}</span>
                       </div>
                       <div className="mgmt-card-detail">
                         <span className="mgmt-card-detail-label">Absent</span>
-                        <span className="mgmt-card-detail-value" style={{ color: "#ef4444" }}>{subject.absent_count}</span>
+                        <span className="mgmt-card-detail-value" style={{ color: COLORS.error }}>{subject.absent_count}</span>
                       </div>
                       <div className="mgmt-card-detail">
                         <span className="mgmt-card-detail-label">Rate</span>
-                        <span className="mgmt-card-detail-value" style={{ color: subject.attendance_rate >= 75 ? "#10b981" : subject.attendance_rate >= 50 ? "#f59e0b" : "#ef4444" }}>
+                        <span className="mgmt-card-detail-value" style={{ color: subject.attendance_rate >= 75 ? COLORS.present : subject.attendance_rate >= 50 ? COLORS.warning : COLORS.error }}>
                           {subject.attendance_rate}%
                         </span>
                       </div>
@@ -260,7 +261,7 @@ export default function StudentDashboard() {
                 <div className="mgmt-card-top mgmt-card-top--blue" />
                 <div className="mgmt-card-body">
                   <div className="mgmt-card-header">
-                    <div className="mgmt-card-icon" style={{ background: "rgba(37, 99, 235, 0.1)", color: "#2563eb" }}>
+                    <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
                       <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                       </svg>

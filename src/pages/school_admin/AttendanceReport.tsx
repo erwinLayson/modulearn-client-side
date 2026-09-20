@@ -5,6 +5,7 @@ import { attendanceApi, classApi, type ClassListItem } from "../../api/classes";
 import { subjectApi, type SubjectListItem } from "../../api/subjects";
 import apiClient from "../../api/client";
 import Toast from "../../components/Toast";
+import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -646,7 +647,7 @@ export default function AttendanceReport() {
                 <span
                   className="attn-detail__value"
                   style={{
-                    color: selectedCell.rate >= 95 ? "#166534" : selectedCell.rate < 75 ? "#991b1b" : "var(--ml-accent-active)",
+                    color: selectedCell.rate >= 95 ? COLORS.presentDark : selectedCell.rate < 75 ? COLORS.absentDark : "var(--ml-accent-active)",
                   }}
                 >
                   {selectedCell.rate.toFixed(1)}%

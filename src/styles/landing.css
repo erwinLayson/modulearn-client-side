@@ -40,6 +40,7 @@ section[id] {
   border-radius: 0.625rem;
   background: var(--ml-primary);
   color: var(--ml-accent-hover);
+  overflow: hidden;
 }
 .land-logo-mark svg {
   height: 1.25rem;
@@ -80,7 +81,7 @@ section[id] {
 }
 .land-btn--primary {
   background: var(--ml-accent);
-  color: #ffffff;
+  color: var(--ml-on-primary);
   box-shadow: var(--ml-shadow-accent);
 }
 .land-btn--primary:hover {
@@ -102,7 +103,7 @@ section[id] {
 }
 .land-btn--dark {
   background: var(--ml-primary);
-  color: #ffffff;
+  color: var(--ml-on-primary);
 }
 .land-btn--dark:hover {
   background: var(--ml-primary-hover);

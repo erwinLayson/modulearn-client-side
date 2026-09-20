@@ -43,13 +43,13 @@
   pointer-events: auto;
 }
 .toast--success {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: var(--ml-success-bg);
+  border: 1px solid var(--ml-success-border);
+  color: #166534;
 }
 .toast--error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--ml-error-bg);
+  border: 1px solid var(--ml-error-border);
   color: #991b1b;
 }
 .toast-icon {
@@ -58,10 +58,10 @@
   width: 1.25rem;
 }
 .toast-icon--success {
-  color: #059669;
+  color: var(--ml-success);
 }
 .toast-icon--error {
-  color: #dc2626;
+  color: var(--ml-error);
 }
 .toast-msg {
   flex: 1;

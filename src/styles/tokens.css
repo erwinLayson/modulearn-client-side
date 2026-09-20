@@ -2,41 +2,58 @@
 
 /* ============================================================
    ModuLearn Design Tokens — 60 / 30 / 10
-   60 %  light surfaces   -> page bg very light mint, cards white
-   30 %  deep forest green-> structure, headers, brand panels
-   10 %  emerald green    -> CTAs, links, accents, focus rings
+   60 %  light surfaces   -> page bg #F8FAFC, cards white
+   30 %  deep navy        -> structure, headers, brand panels
+   10 %  bright blue      -> CTAs, links, accents, focus rings
    Single source of truth — change a color here to re-theme.
    ============================================================ */
 :root {
-  /* 60 % — white & mint surfaces */
-  --ml-page-bg: #eaf8f1;
-  --ml-surface: #ffffff;
-  --ml-surface-alt: #e4f4ec;
-  --ml-card-bg: #ffffff;
-  --ml-border: #d7e7df;
+  /* 60 % — white & light surfaces */
+  --ml-page-bg: #F8FAFC;
+  --ml-surface: #FFFFFF;
+  --ml-surface-alt: #E8F1FF;
+  --ml-card-bg: #FFFFFF;
+  --ml-border: #E2E8F0;
 
-  /* 30 % — deep forest green structure */
-  --ml-primary: #18372e;
-  --ml-primary-hover: #1f4739;
-  --ml-primary-deep: #0e2a21;
-  --ml-on-primary: #ffffff;
-  --ml-on-primary-soft: #e4f4ec;
+  /* 30 % — deep navy structure */
+  --ml-primary: #0B2A5B;
+  --ml-primary-hover: #0D3578;
+  --ml-primary-deep: #061D3F;
+  --ml-on-primary: #FFFFFF;
+  --ml-on-primary-soft: #E8F1FF;
 
-  /* 10 % — emerald green accent */
-  --ml-accent: #16845b;
-  --ml-accent-hover: #1e9a6d;
-  --ml-accent-active: #116a46;
-  --ml-glow: rgba(22, 132, 91, 0.4);
-  --ml-focus-ring: rgba(22, 132, 91, 0.3);
+  /* 10 % — bright blue accent */
+  --ml-accent: #0D6EFD;
+  --ml-accent-hover: #0B5ED7;
+  --ml-accent-active: #0A52B5;
+  --ml-glow: rgba(13, 110, 253, 0.4);
+  --ml-focus-ring: rgba(13, 110, 253, 0.3);
 
   /* text */
-  --ml-text: #18372e;
-  --ml-label: #18372e;
-  --ml-text-secondary: #607a82;
-  --ml-text-muted: #8aa99f;
+  --ml-text: #0F172A;
+  --ml-label: #0F172A;
+  --ml-text-secondary: #64748B;
+  --ml-text-muted: #94A3B8;
+
+  /* status */
+  --ml-success: #16A34A;
+  --ml-success-bg: #F0FDF4;
+  --ml-success-border: #BBF7D0;
+  --ml-warning: #F59E0B;
+  --ml-warning-bg: #FFFBEB;
+  --ml-warning-border: #FDE68A;
+  --ml-error: #DC2626;
+  --ml-error-bg: #FEF2F2;
+  --ml-error-border: #FECACA;
+  --ml-info: #0D6EFD;
+  --ml-info-bg: #EFF6FF;
+  --ml-info-border: #BFDBFE;
+
+  /* supporting palette */
+  --ml-secondary-blue: #1557C0;
+  --ml-navy-light: #E8F1FF;
 
   /* shadows */
-  --ml-shadow: 0 20px 25px -5px rgba(14, 42, 33, 0.08), 0 8px 10px -6px rgba(14, 42, 33, 0.06);
-  --ml-shadow-accent: 0 10px 15px -3px rgba(22, 132, 91, 0.35);
+  --ml-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+  --ml-shadow-accent: 0 10px 15px -3px rgba(13, 110, 253, 0.35);
 }
-

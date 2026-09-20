@@ -18,7 +18,7 @@
 
 .mgmt-btn--primary {
   background: var(--ml-accent);
-  color: #fff;
+  color: var(--ml-on-primary);
 }
 
 .mgmt-btn--primary:hover:not(:disabled) {

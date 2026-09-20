@@ -27,23 +27,23 @@
 }
 
 .mgmt-card-top--orange {
-  background: #ea580c;
+  background: var(--ml-secondary-blue);
 }
 
 .mgmt-card-top--green {
-  background: #059669;
+  background: var(--ml-success);
 }
 
 .mgmt-card-top--purple {
-  background: #7c3aed;
+  background: var(--ml-primary);
 }
 
 .mgmt-card-top--blue {
-  background: #2563eb;
+  background: var(--ml-accent);
 }
 
 .mgmt-card-top--red {
-  background: #dc2626;
+  background: var(--ml-error);
 }
 
 .mgmt-card-body {
@@ -67,7 +67,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.625rem;
-  background: rgba(22, 132, 91, 0.1);
+  background: rgba(13, 110, 253, 0.1);
   color: var(--ml-accent);
   flex-shrink: 0;
 }
@@ -216,15 +216,15 @@
 }
 
 .mgmt-capacity-fill--low {
-  background: #059669;
+  background: var(--ml-success);
 }
 
 .mgmt-capacity-fill--mid {
-  background: #d97706;
+  background: var(--ml-warning);
 }
 
 .mgmt-capacity-fill--high {
-  background: #dc2626;
+  background: var(--ml-error);
 }
 
 .mgmt-capacity-text {
@@ -245,7 +245,7 @@
 
 .mgmt-card--selected {
   border-color: var(--ml-accent);
-  box-shadow: 0 4px 12px rgba(22, 132, 91, 0.15);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
 }
 
 /* ---------- inline detail panel ---------- */
@@ -320,12 +320,12 @@
 
 /* Teal stat card variant */
 .dash-stat-card--teal::before {
-  background: #0d9488;
+  background: var(--ml-secondary-blue);
 }
 
 .dash-stat-icon--teal {
-  background: rgba(13, 148, 136, 0.1);
-  color: #0d9488;
+  background: rgba(21, 87, 192, 0.1);
+  color: var(--ml-secondary-blue);
 }
 
 /* Clickable card */

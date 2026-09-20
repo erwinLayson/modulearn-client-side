@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory } from "../../api/gradebook";
 import Toast from "../../components/Toast";
+import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -423,11 +424,11 @@ export default function GradebookSubject() {
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: weightsValid ? "#16a34a" : "#dc2626" }}>
+            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: weightsValid ? COLORS.present : COLORS.error }}>
               Total: {weightTotal}%
             </span>
             {!weightsValid && (
-              <span style={{ fontSize: "0.75rem", color: "#dc2626" }}>Must equal 100%</span>
+              <span style={{ fontSize: "0.75rem", color: COLORS.error }}>Must equal 100%</span>
             )}
             <button
               className="mgmt-btn mgmt-btn--primary"
@@ -638,7 +639,7 @@ export default function GradebookSubject() {
                               className="gb-spreadsheet__attendance-fill"
                               style={{
                                 width: `${attendanceRate}%`,
-                                background: attendanceRate >= 75 ? "#16a34a" : attendanceRate >= 60 ? "#f59e0b" : "#dc2626",
+                                background: attendanceRate >= 75 ? COLORS.present : attendanceRate >= 60 ? COLORS.warning : COLORS.error,
                               }}
                             />
                           </div>
@@ -777,7 +778,7 @@ export default function GradebookSubject() {
               <button className="mgmt-btn mgmt-btn--ghost" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
               <button
                 className="mgmt-btn mgmt-btn--primary"
-                style={{ background: "#dc2626", borderColor: "#dc2626" }}
+                style={{ background: COLORS.error, borderColor: COLORS.error }}
                 onClick={() => handleDeleteItem(deleteConfirmId)}
               >
                 Delete

@@ -52,15 +52,15 @@
 }
 
 .dash-stat-card--green::before {
-  background: #059669;
+  background: var(--ml-success);
 }
 
 .dash-stat-card--purple::before {
-  background: #7c3aed;
+  background: var(--ml-primary);
 }
 
 .dash-stat-card--orange::before {
-  background: #ea580c;
+  background: var(--ml-secondary-blue);
 }
 
 .dash-stat-card--accent::before {
@@ -74,7 +74,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.5rem;
-  background: rgba(22, 132, 91, 0.1);
+  background: rgba(13, 110, 253, 0.1);
   color: var(--ml-accent);
 }
 
@@ -84,18 +84,18 @@
 }
 
 .dash-stat-icon--green {
-  background: rgba(5, 150, 105, 0.1);
-  color: #059669;
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--ml-success);
 }
 
 .dash-stat-icon--purple {
-  background: rgba(124, 58, 237, 0.1);
-  color: #7c3aed;
+  background: rgba(11, 42, 91, 0.1);
+  color: var(--ml-primary);
 }
 
 .dash-stat-icon--orange {
-  background: rgba(234, 88, 12, 0.1);
-  color: #ea580c;
+  background: rgba(21, 87, 192, 0.1);
+  color: var(--ml-secondary-blue);
 }
 
 .dash-stat-label {
@@ -190,11 +190,11 @@
 }
 
 .dash-list-avatar--green {
-  background: #059669;
+  background: var(--ml-success);
 }
 
 .dash-list-avatar--purple {
-  background: #7c3aed;
+  background: var(--ml-primary);
 }
 
 .dash-list-info {
@@ -287,33 +287,33 @@
 }
 
 .dash-badge--active {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  background: var(--ml-success-bg);
+  color: #166534;
+  border: 1px solid var(--ml-success-border);
 }
 
 .dash-badge--completed {
-  background: #eff6ff;
+  background: var(--ml-info-bg);
   color: #1e40af;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--ml-info-border);
 }
 
 .dash-badge--dropped {
-  background: #fef2f2;
+  background: var(--ml-error-bg);
   color: #991b1b;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--ml-error-border);
 }
 
 .dash-badge--warning {
-  background: #fffbeb;
+  background: var(--ml-warning-bg);
   color: #92400e;
-  border: 1px solid #fde68a;
+  border: 1px solid var(--ml-warning-border);
 }
 
 .dash-badge--info {
-  background: #eff6ff;
+  background: var(--ml-info-bg);
   color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--ml-info-border);
 }
 
 .dash-placeholder {

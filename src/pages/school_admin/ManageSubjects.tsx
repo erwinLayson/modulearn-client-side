@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { subjectApi, type SubjectListItem, type SubjectPayload, type SubjectFaculty } from "../../api/subjects";
 import Toast from "../../components/Toast";
+import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -239,7 +240,7 @@ export default function ManageSubjects() {
                   <div className="mgmt-assign-list">
                     {notAssigned.map((f) => (
                       <div key={f.id} className="mgmt-assign-item">
-                        <div className="mgmt-card-icon" style={{ background: "rgba(37, 99, 235, 0.1)", color: "#2563eb", width: "2rem", height: "2rem" }}>
+                        <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent, width: "2rem", height: "2rem" }}>
                           <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: "1rem", height: "1rem" }}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                           </svg>
@@ -329,7 +330,7 @@ export default function ManageSubjects() {
               <div className="mgmt-card-top mgmt-card-top--green" />
               <div className="mgmt-card-body">
                 <div className="mgmt-card-header">
-                  <div className="mgmt-card-icon" style={{ background: "rgba(5, 150, 105, 0.1)", color: "#059669" }}>
+                  <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
                     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                     </svg>

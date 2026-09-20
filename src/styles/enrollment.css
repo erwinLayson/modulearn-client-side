@@ -200,12 +200,12 @@
   font-size: 0.6875rem;
 }
 
-.enroll-avatar--1 { background: #16845b; }
-.enroll-avatar--2 { background: #0e7490; }
-.enroll-avatar--3 { background: #7c3aed; }
-.enroll-avatar--4 { background: #b45309; }
-.enroll-avatar--5 { background: #be185d; }
-.enroll-avatar--6 { background: #4d7c0f; }
+.enroll-avatar--1 { background: var(--ml-accent); }
+.enroll-avatar--2 { background: var(--ml-primary); }
+.enroll-avatar--3 { background: var(--ml-secondary-blue); }
+.enroll-avatar--4 { background: #475569; }
+.enroll-avatar--5 { background: #0EA5E9; }
+.enroll-avatar--6 { background: #6366F1; }
 
 /* ---------- Student search ---------- */
 .enroll-search-wrap {
@@ -314,7 +314,7 @@
 
 .enroll-chip-remove:hover {
   background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
+  color: var(--ml-error);
 }
 
 /* ---------- Class cards ---------- */
@@ -348,7 +348,7 @@
 .enroll-class-card--selected {
   border-color: var(--ml-accent);
   box-shadow: 0 0 0 2px var(--ml-focus-ring);
-  background: rgba(22, 132, 91, 0.03);
+  background: rgba(13, 110, 253, 0.03);
 }
 
 .enroll-class-check {
@@ -363,7 +363,7 @@
   border-radius: 9999px;
   background: var(--ml-accent);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(22, 132, 91, 0.4);
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.4);
 }
 
 .enroll-grade-btn {
@@ -384,14 +384,14 @@
 
 .enroll-grade-btn:hover {
   border-color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.04);
+  background: rgba(13, 110, 253, 0.04);
 }
 
 .enroll-grade-btn--selected {
   border-color: var(--ml-accent);
   background: var(--ml-accent);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(22, 132, 91, 0.3);
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
 }
 
 .enroll-class-name {
@@ -441,7 +441,7 @@
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.08);
+  background: rgba(13, 110, 253, 0.08);
   border: 1px solid transparent;
   border-radius: 0.375rem;
   cursor: pointer;
@@ -449,7 +449,7 @@
 }
 
 .enroll-mini-btn:hover {
-  background: rgba(22, 132, 91, 0.15);
+  background: rgba(13, 110, 253, 0.15);
 }
 
 .enroll-subjects-grid {
@@ -473,12 +473,12 @@
 
 .enroll-subject-card:hover {
   border-color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.02);
+  background: rgba(13, 110, 253, 0.02);
 }
 
 .enroll-subject-card--selected {
   border-color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.05);
+  background: rgba(13, 110, 253, 0.05);
 }
 
 .enroll-subject-card input {
@@ -616,8 +616,8 @@
   transition: width 0.3s;
 }
 
-.enroll-cap-fill--warn { background: #d97706; }
-.enroll-cap-fill--full { background: #dc2626; }
+.enroll-cap-fill--warn { background: var(--ml-warning); }
+.enroll-cap-fill--full { background: var(--ml-error); }
 
 .enroll-cap-text {
   font-size: 0.6875rem;
@@ -630,8 +630,8 @@
 .enroll-hints {
   margin: 0.75rem 0;
   padding: 0.75rem 0.875rem 0.75rem 1.75rem;
-  background: rgba(217, 119, 6, 0.06);
-  border: 1px solid rgba(217, 119, 6, 0.18);
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.18);
   border-radius: 0.5rem;
   font-size: 0.75rem;
   color: #92400e;
@@ -674,9 +674,9 @@
   padding-bottom: 0.375rem;
 }
 
-.enroll-status-select--active { color: #065f46; border-color: #a7f3d0; background: #ecfdf5; }
-.enroll-status-select--dropped { color: #991b1b; border-color: #fecaca; background: #fef2f2; }
-.enroll-status-select--completed { color: #1e40af; border-color: #bfdbfe; background: #eff6ff; }
+.enroll-status-select--active { color: #166534; border-color: var(--ml-success-border); background: var(--ml-success-bg); }
+.enroll-status-select--dropped { color: #991b1b; border-color: var(--ml-error-border); background: var(--ml-error-bg); }
+.enroll-status-select--completed { color: #1e40af; border-color: var(--ml-info-border); background: var(--ml-info-bg); }
 
 /* ---------- import modal drop zone ---------- */
 .mgmt-drop-zone {
@@ -692,12 +692,12 @@
 
 .mgmt-drop-zone:hover {
   border-color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.03);
+  background: rgba(13, 110, 253, 0.03);
 }
 
 .mgmt-drop-zone--active {
   border-color: var(--ml-accent);
-  background: rgba(22, 132, 91, 0.08);
+  background: rgba(13, 110, 253, 0.08);
   box-shadow: 0 0 0 4px var(--ml-focus-ring);
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { attendanceApi, type FacultyDashboardSummary } from "../../api/classes";
 import apiClient from "../../api/client";
+import { COLORS } from "../../constant/colors";
 
 interface ModuleData {
   id: string;
@@ -117,7 +118,7 @@ export default function FacultyDashboard() {
         ) : attendanceSummary ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
             <div className="dash-stat-card dash-stat-card--accent" style={{ padding: "1rem" }}>
-              <div className="dash-stat-icon" style={{ background: "rgba(37, 99, 235, 0.1)", color: "#2563eb" }}>
+              <div className="dash-stat-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
                 <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
@@ -126,7 +127,7 @@ export default function FacultyDashboard() {
               <span className="dash-stat-value">{attendanceSummary.today.classes_with_attendance}</span>
             </div>
             <div className="dash-stat-card dash-stat-card--warning" style={{ padding: "1rem" }}>
-              <div className="dash-stat-icon" style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" }}>
+              <div className="dash-stat-icon" style={{ background: "rgba(245, 158, 11, 0.1)", color: COLORS.warning }}>
                 <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a11.1 11.1 0 11-5.5 1.5 3.75 3.75 0 017.029 2.917M12 9l-3 3m0 0l-3-3m3 3V21" />
                 </svg>
@@ -135,7 +136,7 @@ export default function FacultyDashboard() {
               <span className="dash-stat-value">{attendanceSummary.today.classes_pending}</span>
             </div>
             <div className="dash-stat-card dash-stat-card--green" style={{ padding: "1rem" }}>
-              <div className="dash-stat-icon" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>
+              <div className="dash-stat-icon" style={{ background: "rgba(22, 163, 74, 0.1)", color: COLORS.present }}>
                 <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5L12 12m0 0l7.5-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -156,21 +157,21 @@ export default function FacultyDashboard() {
           <div className="dash-loading">Loading...</div>
         ) : attendanceSummary ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: "4px solid #2563eb" }}>
+            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: `4px solid ${COLORS.accent}` }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Total Sessions</span>
               <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: "var(--ml-text)" }}>{attendanceSummary.this_week.total_sessions}</p>
             </div>
-            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: "4px solid #10b981" }}>
+            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: `4px solid ${COLORS.present}` }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Present</span>
-              <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: "#10b981" }}>{attendanceSummary.this_week.total_present}</p>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: COLORS.present }}>{attendanceSummary.this_week.total_present}</p>
             </div>
-            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: "4px solid #ef4444" }}>
+            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: `4px solid ${COLORS.error}` }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Absent</span>
-              <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: "#ef4444" }}>{attendanceSummary.this_week.total_absent}</p>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: COLORS.error }}>{attendanceSummary.this_week.total_absent}</p>
             </div>
-            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: "4px solid #2563eb" }}>
+            <div className="dash-stat-card" style={{ padding: "1rem", borderLeft: `4px solid ${COLORS.accent}` }}>
               <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Attendance Rate</span>
-              <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: "#2563eb" }}>{attendanceSummary.this_week.attendance_rate}%</p>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "1.5rem", fontWeight: 700, color: COLORS.accent }}>{attendanceSummary.this_week.attendance_rate}%</p>
             </div>
           </div>
         ) : (

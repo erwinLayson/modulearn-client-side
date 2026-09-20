@@ -149,11 +149,11 @@
 }
 
 .mgmt-action--edit:hover {
-  background: rgba(22, 132, 91, 0.08);
+  background: rgba(13, 110, 253, 0.08);
 }
 
 .mgmt-action--delete {
-  color: #dc2626;
+  color: var(--ml-error);
 }
 
 .mgmt-action--delete:hover {

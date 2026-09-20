@@ -82,7 +82,7 @@
 .sidebar-link--active {
   background: var(--ml-accent);
   color: var(--ml-on-primary);
-  box-shadow: 0 2px 8px rgba(22, 132, 91, 0.4);
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.4);
 }
 
 .sidebar-link--active:hover {

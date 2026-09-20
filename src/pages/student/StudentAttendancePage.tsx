@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { attendanceApi, type StudentSubjectAttendance, type StudentAttendanceRecord } from "../../api/classes";
 import { schoolYearApi } from "../../api/school-years";
+import { COLORS } from "../../constant/colors";
 
 function getStatusColor(rate: number): string {
-  if (rate >= 75) return "#16a34a";
-  if (rate >= 50) return "#d97706";
-  return "#dc2626";
+  if (rate >= 75) return COLORS.present;
+  if (rate >= 50) return COLORS.warning;
+  return COLORS.error;
 }
 
 function formatDateShort(dateStr: string): string {
@@ -132,11 +133,11 @@ export default function StudentAttendancePage() {
           </div>
           <div style={{ padding: "1rem 1.25rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
             <p style={{ margin: 0, fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ml-text-muted)" }}>Present</p>
-            <p style={{ margin: "0.375rem 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#16a34a" }}>{totalPresent}</p>
+            <p style={{ margin: "0.375rem 0 0", fontSize: "1.5rem", fontWeight: 800, color: COLORS.present }}>{totalPresent}</p>
           </div>
           <div style={{ padding: "1rem 1.25rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
             <p style={{ margin: 0, fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ml-text-muted)" }}>Absent</p>
-            <p style={{ margin: "0.375rem 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#dc2626" }}>{totalAbsent}</p>
+            <p style={{ margin: "0.375rem 0 0", fontSize: "1.5rem", fontWeight: 800, color: COLORS.error }}>{totalAbsent}</p>
           </div>
           <div style={{ padding: "1rem 1.25rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
             <p style={{ margin: 0, fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ml-text-muted)" }}>Overall Rate</p>
@@ -241,9 +242,9 @@ export default function StudentAttendancePage() {
                                     borderRadius: "9999px",
                                     fontSize: "0.6875rem",
                                     fontWeight: 600,
-                                    background: status === "present" ? "#dcfce7" : "#fef2f2",
-                                    color: status === "present" ? "#166534" : "#991b1b",
-                                    border: `1px solid ${status === "present" ? "#bbf7d0" : "#fecaca"}`,
+                                    background: status === "present" ? COLORS.presentBg : COLORS.absentBg,
+                                    color: status === "present" ? COLORS.presentDark : COLORS.absentDark,
+                                    border: `1px solid ${status === "present" ? COLORS.presentBorder : COLORS.absentBorder}`,
                                   }}
                                 >
                                   {status === "present" ? "P" : "A"}
@@ -264,7 +265,7 @@ export default function StudentAttendancePage() {
                       </td>
                       {dateTotals.map(({ date, present, total }) => (
                         <td key={date} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, fontSize: "0.75rem" }}>
-                          <span style={{ color: "#16a34a" }}>{present}</span>
+                          <span style={{ color: COLORS.present }}>{present}</span>
                           <span style={{ color: "var(--ml-text-muted)" }}>/{total}</span>
                         </td>
                       ))}

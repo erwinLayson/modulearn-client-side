@@ -10,6 +10,7 @@ import {
 import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
 import { schoolYearApi } from "../../api/school-years";
 import Toast from "../../components/Toast";
+import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -21,7 +22,7 @@ interface ClassCardData {
 }
 
 function getRate(p: number, t: number) { return t > 0 ? Math.round((p / t) * 100) : 0; }
-function rateColor(r: number) { return r >= 75 ? "#16a34a" : r >= 50 ? "#d97706" : "#dc2626"; }
+function rateColor(r: number) { return r >= 75 ? COLORS.present : r >= 50 ? COLORS.warning : COLORS.error; }
 
 export default function FacultyAttendancePage() {
   const { user } = useAuth();
@@ -335,7 +336,7 @@ export default function FacultyAttendancePage() {
                 <div className="mgmt-card-top mgmt-card-top--blue" />
                 <div className="mgmt-card-body">
                   <div className="mgmt-card-header">
-                    <div className="mgmt-card-icon" style={{ background: "rgba(37, 99, 235, 0.1)", color: "#2563eb" }}>
+                    <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
                       <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
                       </svg>
@@ -440,11 +441,11 @@ export default function FacultyAttendancePage() {
             </div>
             <div style={{ padding: "0.75rem 1rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", color: "var(--ml-text-muted)" }}>Present</p>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: "#16a34a" }}>{attSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "present").length, 0)}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: COLORS.present }}>{attSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "present").length, 0)}</p>
             </div>
             <div style={{ padding: "0.75rem 1rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", color: "var(--ml-text-muted)" }}>Absent</p>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: "#dc2626" }}>{attSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "absent").length, 0)}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: COLORS.error }}>{attSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "absent").length, 0)}</p>
             </div>
           </div>
 
@@ -452,8 +453,8 @@ export default function FacultyAttendancePage() {
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
               <h3 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 700 }}>Attendance Spreadsheet</h3>
               {hasUnsavedChanges && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", fontWeight: 600, color: "#d97706", background: "rgba(217, 119, 6, 0.1)", padding: "0.25rem 0.625rem", borderRadius: "1rem" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#d97706", display: "inline-block" }} />
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", fontWeight: 600, color: COLORS.warning, background: "rgba(245, 158, 11, 0.1)", padding: "0.25rem 0.625rem", borderRadius: "1rem" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.warning, display: "inline-block" }} />
                   Unsaved changes
                 </span>
               )}
@@ -527,8 +528,8 @@ export default function FacultyAttendancePage() {
                         </div>
                       </th>
                     ))}
-                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(16, 163, 74, 0.06)", color: "#16a34a", verticalAlign: "bottom" }} rowSpan={2}>PRESENT</th>
-                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: "#dc2626", verticalAlign: "bottom" }} rowSpan={2}>ABSENT</th>
+                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(22, 163, 74, 0.06)", color: COLORS.present, verticalAlign: "bottom" }} rowSpan={2}>PRESENT</th>
+                    <th className="gb-spreadsheet__th" style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: COLORS.error, verticalAlign: "bottom" }} rowSpan={2}>ABSENT</th>
                     <th className="gb-spreadsheet__th" style={{ minWidth: 80, textAlign: "center", verticalAlign: "bottom" }} rowSpan={2}>CLASS RATE</th>
                   </tr>
                 </thead>
@@ -569,8 +570,8 @@ export default function FacultyAttendancePage() {
                             </td>
                           );
                         })}
-                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#16a34a", background: "rgba(16, 163, 74, 0.03)" }}>{present}</td>
-                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#dc2626", background: "rgba(220, 38, 38, 0.03)" }}>{absent}</td>
+                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.present, background: "rgba(22, 163, 74, 0.03)" }}>{present}</td>
+                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.error, background: "rgba(220, 38, 38, 0.03)" }}>{absent}</td>
                         <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: total > 0 ? rateColor(rate) : "var(--ml-text-muted)" }}>{total > 0 ? `${rate}%` : "\u2014"}</td>
                       </tr>
                     );
@@ -597,8 +598,8 @@ export default function FacultyAttendancePage() {
                         <td key={`${s.date}-${s.subject_id}-${i}`} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, padding: "0.5rem" }}>
                           {recorded > 0 ? (
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.0625rem", lineHeight: 1.2 }}>
-                              <span style={{ color: "#16a34a", fontSize: "0.75rem" }}>{p} Present</span>
-                              <span style={{ color: "#dc2626", fontSize: "0.75rem" }}>{a} Absent</span>
+                              <span style={{ color: COLORS.present, fontSize: "0.75rem" }}>{p} Present</span>
+                              <span style={{ color: COLORS.error, fontSize: "0.75rem" }}>{a} Absent</span>
                             </div>
                           ) : (
                             <span style={{ color: "var(--ml-text-muted)", fontSize: "0.75rem" }}>&#8212;</span>
@@ -619,8 +620,8 @@ export default function FacultyAttendancePage() {
                       const tt = tp + ta;
                       return (
                         <>
-                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#16a34a", background: "rgba(16, 163, 74, 0.03)" }}>{tp}</td>
-                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#dc2626", background: "rgba(220, 38, 38, 0.03)" }}>{ta}</td>
+                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.present, background: "rgba(22, 163, 74, 0.03)" }}>{tp}</td>
+                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.error, background: "rgba(220, 38, 38, 0.03)" }}>{ta}</td>
                           <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: tt > 0 ? rateColor(getRate(tp, tt)) : "var(--ml-text-muted)" }}>{tt > 0 ? `${getRate(tp, tt)}%` : "\u2014"}</td>
                         </>
                       );
@@ -704,14 +705,14 @@ export default function FacultyAttendancePage() {
                     ))}
                     <th
                       className="gb-spreadsheet__th"
-                      style={{ minWidth: 72, textAlign: "center", background: "rgba(16, 163, 74, 0.06)", color: "#16a34a", verticalAlign: "bottom" }}
+                      style={{ minWidth: 72, textAlign: "center", background: "rgba(22, 163, 74, 0.06)", color: COLORS.present, verticalAlign: "bottom" }}
                       rowSpan={2}
                     >
                       PRESENT
                     </th>
                     <th
                       className="gb-spreadsheet__th"
-                      style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: "#dc2626", verticalAlign: "bottom" }}
+                      style={{ minWidth: 72, textAlign: "center", background: "rgba(220, 38, 38, 0.06)", color: COLORS.error, verticalAlign: "bottom" }}
                       rowSpan={2}
                     >
                       ABSENT
@@ -749,13 +750,13 @@ export default function FacultyAttendancePage() {
                           return (
                             <td key={`${s.date}-${s.subject_id}-${i}`} className="gb-spreadsheet__td" style={{ textAlign: "center" }}>
                               {status === "present" ? (
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#166534", fontWeight: 600, fontSize: "0.8125rem" }}>
-                                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "20px", height: "20px", borderRadius: "50%", background: "#dcfce7", fontSize: "0.7rem", fontWeight: 700 }}>&#10003;</span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: COLORS.presentDark, fontWeight: 600, fontSize: "0.8125rem" }}>
+                                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "20px", height: "20px", borderRadius: "50%", background: COLORS.presentBg, fontSize: "0.7rem", fontWeight: 700 }}>&#10003;</span>
                                   Present
                                 </span>
                               ) : status === "absent" ? (
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "#991b1b", fontWeight: 600, fontSize: "0.8125rem" }}>
-                                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "20px", height: "20px", borderRadius: "50%", background: "#fef2f2", fontSize: "0.7rem", fontWeight: 700 }}>&#10007;</span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: COLORS.absentDark, fontWeight: 600, fontSize: "0.8125rem" }}>
+                                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "20px", height: "20px", borderRadius: "50%", background: COLORS.absentBg, fontSize: "0.7rem", fontWeight: 700 }}>&#10007;</span>
                                   Absent
                                 </span>
                               ) : (
@@ -764,10 +765,10 @@ export default function FacultyAttendancePage() {
                             </td>
                           );
                         })}
-                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#16a34a", background: "rgba(16, 163, 74, 0.03)" }}>
+                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.present, background: "rgba(22, 163, 74, 0.03)" }}>
                           {present}
                         </td>
-                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#dc2626", background: "rgba(220, 38, 38, 0.03)" }}>
+                        <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.error, background: "rgba(220, 38, 38, 0.03)" }}>
                           {absent}
                         </td>
                         <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: total > 0 ? rateColor(rate) : "var(--ml-text-muted)" }}>
@@ -793,8 +794,8 @@ export default function FacultyAttendancePage() {
                         <td key={`${s.date}-${s.subject_id}-${i}`} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, padding: "0.5rem" }}>
                           {recorded > 0 ? (
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.0625rem", lineHeight: 1.2 }}>
-                              <span style={{ color: "#16a34a", fontSize: "0.75rem" }}>{p} Present</span>
-                              <span style={{ color: "#dc2626", fontSize: "0.75rem" }}>{a} Absent</span>
+                              <span style={{ color: COLORS.present, fontSize: "0.75rem" }}>{p} Present</span>
+                              <span style={{ color: COLORS.error, fontSize: "0.75rem" }}>{a} Absent</span>
                             </div>
                           ) : (
                             <span style={{ color: "var(--ml-text-muted)", fontSize: "0.75rem" }}>&#8212;</span>
@@ -815,8 +816,8 @@ export default function FacultyAttendancePage() {
                       const tt = tp + ta;
                       return (
                         <>
-                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#16a34a", background: "rgba(16, 163, 74, 0.03)" }}>{tp}</td>
-                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: "#dc2626", background: "rgba(220, 38, 38, 0.03)" }}>{ta}</td>
+                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.present, background: "rgba(22, 163, 74, 0.03)" }}>{tp}</td>
+                          <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: COLORS.error, background: "rgba(220, 38, 38, 0.03)" }}>{ta}</td>
                           <td className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, color: tt > 0 ? rateColor(getRate(tp, tt)) : "var(--ml-text-muted)" }}>
                             {tt > 0 ? `${getRate(tp, tt)}%` : "\u2014"}
                           </td>

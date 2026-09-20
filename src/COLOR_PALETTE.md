@@ -4,14 +4,14 @@
 
 | Role                | Color            | Hex       | CSS Token          |
 |---------------------|------------------|-----------|--------------------|
-| Primary / Dark      | Deep Forest Green| `#18372E` | `--ml-primary`     |
-| Primary Button      | Emerald Green    | `#16845B` | `--ml-accent`      |
-| Secondary / Soft    | Pale Mint        | `#E4F4EC` | `--ml-surface-alt` |
-| Page Background     | Very Light Mint  | `#EAF8F1` | `--ml-page-bg`     |
+| Primary / Structure | Deep Navy        | `#0B2A5B` | `--ml-primary`     |
+| Primary Button      | Bright Blue      | `#0D6EFD` | `--ml-accent`      |
+| Secondary / Soft    | Light Blue       | `#E8F1FF` | `--ml-surface-alt` |
+| Page Background     | Very Light Gray  | `#F8FAFC` | `--ml-page-bg`     |
 | Card / Surface      | White            | `#FFFFFF` | `--ml-card-bg`     |
-| Main Text           | Deep Green       | `#18372E` | `--ml-text`        |
-| Secondary Text      | Muted Blue-Gray  | `#607A82` | `--ml-text-secondary` |
-| Border              | Soft Green-Gray  | `#D7E7DF` | `--ml-border`      |
+| Main Text           | Dark Navy        | `#0F172A` | `--ml-text`        |
+| Secondary Text      | Muted Slate      | `#64748B` | `--ml-text-secondary` |
+| Border              | Light Gray       | `#E2E8F0` | `--ml-border`      |
 
 ---
 
@@ -19,10 +19,10 @@
 
 | Share | Family              | Colors                                    | Usage                        |
 |-------|---------------------|-------------------------------------------|------------------------------|
-| 60 %  | Light surfaces      | `#EAF8F1` page bg, `#FFFFFF` cards        | Page background, cards, fields|
-| 30 %  | Deep forest green   | `#18372E` (+ `#0E2A21` gradient partner)  | Brand panels, headers, structure |
-| 10 %  | Emerald green       | `#16845B` (+ `#116A46` pressed, `#1E9A6D` hover) | CTAs, links, focus rings, accents |
-| —     | Pale mint soft      | `#E4F4EC`                                 | Section cards, soft surfaces |
+| 60 %  | Light surfaces      | `#F8FAFC` page bg, `#FFFFFF` cards        | Page background, cards, fields|
+| 30 %  | Deep navy           | `#0B2A5B` (+ `#061D3F` gradient partner)  | Brand panels, headers, structure |
+| 10 %  | Bright blue         | `#0D6EFD` (+ `#0A52B5` pressed, `#0B5ED7` hover) | CTAs, links, focus rings, accents |
+| —     | Light blue soft     | `#E8F1FF`                                 | Section cards, soft surfaces |
 
 ---
 
@@ -30,24 +30,35 @@
 
 | Token                 | Value       | Used By                       |
 |-----------------------|-------------|-------------------------------|
-| `--ml-page-bg`        | `#EAF8F1`   | Auth / register page background |
+| `--ml-page-bg`        | `#F8FAFC`   | Auth / register page background |
 | `--ml-surface`        | `#FFFFFF`   | Inputs, form fields           |
-| `--ml-surface-alt`    | `#E4F4EC`   | Section cards (reg form)      |
+| `--ml-surface-alt`    | `#E8F1FF`   | Section cards, soft surfaces  |
 | `--ml-card-bg`        | `#FFFFFF`   | Login card                    |
-| `--ml-border`         | `#D7E7DF`   | Borders, dividers             |
-| `--ml-primary`        | `#18372E`   | Brand/header panels, headings |
-| `--ml-primary-hover`  | `#1F4739`   | Hover on dark green elements  |
-| `--ml-primary-deep`   | `#0E2A21`   | Gradient partner for panels   |
-| `--ml-on-primary`     | `#FFFFFF`   | Text on dark green            |
-| `--ml-on-primary-soft`| `#E4F4EC`   | Subtle text on dark green     |
-| `--ml-accent`         | `#16845B`   | Primary button, links, focus  |
-| `--ml-accent-hover`   | `#1E9A6D`   | Hover / focus rings           |
-| `--ml-accent-active`  | `#116A46`   | Active / pressed              |
-| `--ml-glow`           | rgba(22,132,91,0.4)  | Avatar glow, shadows     |
-| `--ml-focus-ring`     | rgba(22,132,91,0.3)  | Input focus rings        |
-| `--ml-text`           | `#18372E`   | Primary text on light         |
-| `--ml-text-secondary` | `#607A82`   | Secondary text                |
-| `--ml-text-muted`     | `#8AA99F`   | Placeholders, muted text      |
+| `--ml-border`         | `#E2E8F0`   | Borders, dividers             |
+| `--ml-primary`        | `#0B2A5B`   | Brand/header panels, headings |
+| `--ml-primary-hover`  | `#0D3578`   | Hover on dark elements        |
+| `--ml-primary-deep`   | `#061D3F`   | Gradient partner for panels   |
+| `--ml-on-primary`     | `#FFFFFF`   | Text on dark navy             |
+| `--ml-on-primary-soft`| `#E8F1FF`   | Subtle text on dark navy      |
+| `--ml-accent`         | `#0D6EFD`   | Primary button, links, focus  |
+| `--ml-accent-hover`   | `#0B5ED7`   | Hover / focus rings           |
+| `--ml-accent-active`  | `#0A52B5`   | Active / pressed              |
+| `--ml-glow`           | rgba(13,110,253,0.4) | Avatar glow, shadows  |
+| `--ml-focus-ring`     | rgba(13,110,253,0.3) | Input focus rings       |
+| `--ml-text`           | `#0F172A`   | Primary text on light         |
+| `--ml-text-secondary` | `#64748B`   | Secondary text                |
+| `--ml-text-muted`     | `#94A3B8`   | Placeholders, muted text      |
+
+---
+
+## Status Colors
+
+| Status   | Color       | Background  | Border      | CSS Token           |
+|----------|-------------|-------------|-------------|---------------------|
+| Success  | `#16A34A`   | `#F0FDF4`   | `#BBF7D0`   | `--ml-success`      |
+| Warning  | `#F59E0B`   | `#FFFBEB`   | `#FDE68A`   | `--ml-warning`      |
+| Error    | `#DC2626`   | `#FEF2F2`   | `#FECACA`   | `--ml-error`        |
+| Info     | `#0D6EFD`   | `#EFF6FF`   | `#BFDBFE`   | `--ml-info`         |
 
 ---
 
@@ -55,15 +66,29 @@
 
 | Component        | bg                          | text              | accent                  |
 |------------------|-----------------------------|-------------------|-------------------------|
-| Page background  | Very Light Mint `#EAF8F1`   | Deep Green        | —                       |
-| Card / panel     | White `#FFFFFF`             | Deep Green        | Emerald Green           |
-| Brand/header     | `#18372E` → `#0E2A21`       | White / Pale Mint | Pale Mint `#E4F4EC`     |
-| Section card     | Pale Mint `#E4F4EC`         | Deep Green        | Emerald Green           |
-| Primary button   | Emerald Green `#16845B`     | White             | —                       |
-| Input            | White                       | Deep Green        | Emerald focus ring      |
-| Link             | —                           | Emerald `#116A46` | Emerald `#1E9A6D` hover |
-| Border/dividers  | —                           | —                 | Soft Green-Gray `#D7E7DF` |
+| Page background  | Very Light Gray `#F8FAFC`   | Dark Navy         | —                       |
+| Card / panel     | White `#FFFFFF`             | Dark Navy         | Bright Blue             |
+| Brand/header     | `#0B2A5B` → `#061D3F`       | White / Light Blue| Light Blue `#E8F1FF`    |
+| Section card     | Light Blue `#E8F1FF`        | Dark Navy         | Bright Blue             |
+| Primary button   | Bright Blue `#0D6EFD`       | White             | —                       |
+| Input            | White                       | Dark Navy         | Bright Blue focus ring  |
+| Link             | —                           | Bright Blue `#0D6EFD` | Darker blue hover  |
+| Border/dividers  | —                           | —                 | Light Gray `#E2E8F0`    |
 
 ---
 
-> All colors live once in `:root` in `src/index.css`. Change a `--ml-*` value there to re-theme the entire app.
+## Inline Color Constants
+
+For TypeScript components using inline styles, import from `constant/colors.ts`:
+
+```typescript
+import { COLORS } from "../../constant/colors";
+
+// Usage
+style={{ color: COLORS.present }}
+style={{ background: COLORS.accent }}
+```
+
+---
+
+> All CSS colors live once in `:root` in `src/styles/tokens.css`. Change a `--ml-*` value there to re-theme the entire app. Inline colors are centralized in `src/constant/colors.ts`.

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { gradebookApi, type StudentSubjectGradeSummary } from "../../api/gradebook";
+import { COLORS } from "../../constant/colors";
 
 const CATEGORY_ORDER = ["activities", "quizzes", "exams"] as const;
 const CATEGORY_LABELS: Record<string, string> = {
@@ -9,17 +10,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   exams: "EXAM",
 };
 const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
-  activities: { bg: "#eff6ff", fg: "#1d4ed8" },
-  quizzes: { bg: "#f5f3ff", fg: "#6d28d9" },
-  exams: { bg: "#fef2f2", fg: "#991b1b" },
+  activities: { bg: COLORS.catActivitiesBg, fg: COLORS.catActivitiesFg },
+  quizzes: { bg: COLORS.catQuizzesBg, fg: COLORS.catQuizzesFg },
+  exams: { bg: COLORS.catExamsBg, fg: COLORS.catExamsFg },
 };
 const PASS_THRESHOLD = 75;
 
 function getGradeColor(grade: number): string {
-  if (grade >= 90) return "#16a34a";
-  if (grade >= 75) return "#2563eb";
-  if (grade >= 60) return "#d97706";
-  return "#dc2626";
+  if (grade >= 90) return COLORS.gradeExcellent;
+  if (grade >= 75) return COLORS.gradeGood;
+  if (grade >= 60) return COLORS.gradeFair;
+  return COLORS.gradePoor;
 }
 
 function parseDate(dateVal: unknown): string | null {
@@ -226,7 +227,7 @@ export default function StudentGradebookPage() {
           </div>
           <div style={{ padding: "1rem 1.25rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
             <p style={{ margin: 0, fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ml-text-muted)" }}>Subjects Passed</p>
-            <p style={{ margin: "0.375rem 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#16a34a" }}>
+            <p style={{ margin: "0.375rem 0 0", fontSize: "1.5rem", fontWeight: 800, color: COLORS.present }}>
               {subjectsPassed} <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>/ {subjectsWithGrades}</span>
             </p>
           </div>
@@ -328,7 +329,7 @@ export default function StudentGradebookPage() {
                   <tr>
                     {dateGroups.map(group =>
                       group.cols.map(col => {
-                        const colors = CATEGORY_COLORS[col.category] || { bg: "#f3f4f6", fg: "#374151" };
+                        const colors = CATEGORY_COLORS[col.category] || { bg: "#F1F5F9", fg: "#334155" };
                         return (
                           <th
                             key={col.key}
@@ -373,7 +374,7 @@ export default function StudentGradebookPage() {
                               <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>
                                 {cell.score !== null ? (
                                   <>
-                                    <span style={{ color: cell.max_score > 0 && cell.score / cell.max_score >= 0.75 ? "#16a34a" : cell.max_score > 0 && cell.score / cell.max_score >= 0.5 ? "#d97706" : "#dc2626" }}>
+                                    <span style={{ color: cell.max_score > 0 && cell.score / cell.max_score >= 0.75 ? COLORS.present : cell.max_score > 0 && cell.score / cell.max_score >= 0.5 ? COLORS.warning : COLORS.error }}>
                                       {cell.score}
                                     </span>
                                     <span style={{ color: "var(--ml-text-muted)" }}>/{cell.max_score}</span>
@@ -408,7 +409,7 @@ export default function StudentGradebookPage() {
                     </td>
                     {colTotals.map(({ key, earned, possible }) => (
                       <td key={key} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, fontSize: "0.75rem" }}>
-                        <span style={{ color: possible > 0 ? (earned / possible >= 0.75 ? "#16a34a" : earned / possible >= 0.5 ? "#d97706" : "#dc2626") : "var(--ml-text-muted)" }}>
+                        <span style={{ color: possible > 0 ? (earned / possible >= 0.75 ? COLORS.present : earned / possible >= 0.5 ? COLORS.warning : COLORS.error) : "var(--ml-text-muted)" }}>
                           {possible > 0 ? `${earned}/${possible}` : "—"}
                         </span>
                       </td>
