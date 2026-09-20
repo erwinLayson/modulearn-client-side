@@ -43,6 +43,7 @@ export default function FacultyAttendancePage() {
   const [histSubjectFilter, setHistSubjectFilter] = useState("");
   const [histDateFrom, setHistDateFrom] = useState("");
   const [histDateTo, setHistDateTo] = useState("");
+  const [attSubjectFilter, setAttSubjectFilter] = useState("");
 
   const [spreadSessions, setSpreadSessions] = useState<{ date: string; subject_id: string; subject_name: string; statuses: Record<string, AttendanceStatus> }[]>([]);
   const [spreadStudents, setSpreadStudents] = useState<{ student_id: string; student_name: string; lrn: string | null }[]>([]);
@@ -109,6 +110,7 @@ export default function FacultyAttendancePage() {
     setHistSubjectFilter("");
     setHistDateFrom("");
     setHistDateTo("");
+    setAttSubjectFilter("");
 
     try {
       const syRes = await schoolYearApi.getCurrent(user!.school_id!);
@@ -306,6 +308,10 @@ export default function FacultyAttendancePage() {
 
   const classSubjects = selectedClass?.subjects || [];
 
+  const filteredAttSessions = attSubjectFilter
+    ? attSessions.filter(s => s.subject_id === attSubjectFilter)
+    : attSessions;
+
   if (!user) return null;
 
   if (!selectedClass) {
@@ -433,7 +439,7 @@ export default function FacultyAttendancePage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.75rem", marginBottom: "1.25rem" }}>
             <div style={{ padding: "0.75rem 1rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", color: "var(--ml-text-muted)" }}>Sessions</p>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800 }}>{attSessions.length}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800 }}>{filteredAttSessions.length}</p>
             </div>
             <div style={{ padding: "0.75rem 1rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", color: "var(--ml-text-muted)" }}>Students</p>
@@ -441,12 +447,25 @@ export default function FacultyAttendancePage() {
             </div>
             <div style={{ padding: "0.75rem 1rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", color: "var(--ml-text-muted)" }}>Present</p>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: COLORS.present }}>{attSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "present").length, 0)}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: COLORS.present }}>{filteredAttSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "present").length, 0)}</p>
             </div>
             <div style={{ padding: "0.75rem 1rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", color: "var(--ml-text-muted)" }}>Absent</p>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: COLORS.error }}>{attSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "absent").length, 0)}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "1.25rem", fontWeight: 800, color: COLORS.error }}>{filteredAttSessions.reduce((sum, s) => sum + Object.values(s.statuses).filter(v => v === "absent").length, 0)}</p>
             </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "150px" }}>
+              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Filter by Subject</label>
+              <select className="mgmt-input" value={attSubjectFilter} onChange={(e) => setAttSubjectFilter(e.target.value)} style={{ fontSize: "0.8rem" }}>
+                <option value="">All Subjects</option>
+                {classSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            {attSubjectFilter && (
+              <button className="mgmt-btn mgmt-btn--ghost" onClick={() => setAttSubjectFilter("")} style={{ fontSize: "0.8rem", padding: "0.375rem 0.75rem" }}>Clear Filter</button>
+            )}
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
@@ -503,6 +522,11 @@ export default function FacultyAttendancePage() {
               <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9375rem", color: "var(--ml-text)" }}>No attendance records yet.</p>
               <p style={{ margin: "0.5rem 0 0", fontSize: "0.8125rem", color: "var(--ml-text-muted)" }}>Create an attendance session to begin tracking student attendance.</p>
             </div>
+          ) : filteredAttSessions.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9375rem", color: "var(--ml-text)" }}>No sessions found for the selected subject.</p>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.8125rem", color: "var(--ml-text-muted)" }}>Try selecting a different subject or clear the filter.</p>
+            </div>
           ) : attStudents.length === 0 ? (
             <div className="mgmt-empty" style={{ padding: "2rem" }}>No students enrolled in this class.</div>
           ) : (
@@ -516,7 +540,7 @@ export default function FacultyAttendancePage() {
                         STUDENT
                       </div>
                     </th>
-                    {attSessions.map((s, i) => (
+                    {filteredAttSessions.map((s, i) => (
                       <th key={`${s.date}-${s.subject_id}-${i}`} className="gb-spreadsheet__th" style={{ minWidth: 110, textAlign: "center", padding: "0.5rem 0.625rem", borderBottom: "none" }}>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.125rem" }}>
                           <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--ml-text)" }}>
@@ -537,7 +561,7 @@ export default function FacultyAttendancePage() {
                   {attStudents.map(st => {
                     let present = 0;
                     let absent = 0;
-                    for (const s of attSessions) {
+                    for (const s of filteredAttSessions) {
                       const effective = getEffectiveStatus(st.student_id, s.date, s.subject_id, s.statuses[st.student_id]);
                       if (effective === "present") present++;
                       else if (effective === "absent") absent++;
@@ -552,7 +576,7 @@ export default function FacultyAttendancePage() {
                             {st.lrn && <span style={{ fontSize: "0.6875rem", color: "var(--ml-text-muted)", lineHeight: 1.2 }}>LRN: {st.lrn}</span>}
                           </div>
                         </td>
-                        {attSessions.map((s, i) => {
+                        {filteredAttSessions.map((s, i) => {
                           const cellVal = getCellDisplayValue(st.student_id, s.date, s.subject_id, s.statuses[st.student_id]);
                           const key = editKey(st.student_id, s.date, s.subject_id);
                           const isDirty = pendingEdits.has(key);
@@ -585,7 +609,7 @@ export default function FacultyAttendancePage() {
                         TOTAL
                       </div>
                     </td>
-                    {attSessions.map((s, i) => {
+                    {filteredAttSessions.map((s, i) => {
                       let p = 0;
                       let a = 0;
                       for (const st of attStudents) {
@@ -611,7 +635,7 @@ export default function FacultyAttendancePage() {
                       let tp = 0;
                       let ta = 0;
                       for (const st of attStudents) {
-                        for (const sess of attSessions) {
+                        for (const sess of filteredAttSessions) {
                           const effective = getEffectiveStatus(st.student_id, sess.date, sess.subject_id, sess.statuses[st.student_id]);
                           if (effective === "present") tp++;
                           else if (effective === "absent") ta++;
