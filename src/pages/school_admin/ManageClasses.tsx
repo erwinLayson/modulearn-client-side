@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { classApi, type ClassListItem, type ClassPayload, type ClassUpdatePayload, type ClassFaculty } from "../../api/classes";
 import { subjectApi } from "../../api/subjects";
+import { schoolYearApi, type SchoolYear } from "../../api/school-years";
 import type { SubjectListItem, SubjectFaculty } from "../../api/subjects";
 import { getApiErrorMessage } from "../../api/client";
 import Toast from "../../components/Toast";
@@ -18,6 +19,10 @@ export default function ManageClasses() {
   const [toast, setToast] = useState<ToastState>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
+  // School year state
+  const [schoolYears, setSchoolYears] = useState<SchoolYear[]>([]);
+  const [selectedYearId, setSelectedYearId] = useState<number | "">("");
+
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editing, setEditing] = useState<ClassListItem | null>(null);
@@ -25,6 +30,7 @@ export default function ManageClasses() {
     class_name: "",
     faculty_id: "",
     school_id: schoolId,
+    school_year_id: 0,
     capacity: 30,
     section: "",
     grade_level: "",
@@ -54,12 +60,30 @@ export default function ManageClasses() {
   const [selectedReplacementId, setSelectedReplacementId] = useState<string>("");
   const [updateLoading, setUpdateLoading] = useState(false);
 
+  // Fetch school years on mount
+  useEffect(() => {
+    if (!schoolId) return;
+    (async () => {
+      try {
+        const res = await schoolYearApi.getBySchoolId(schoolId);
+        const years = res.data.data || [];
+        setSchoolYears(years);
+        // Default to current school year
+        const current = years.find((y: SchoolYear) => y.is_current === 1);
+        if (current) setSelectedYearId(current.id);
+      } catch {
+        // silently fail
+      }
+    })();
+  }, [schoolId]);
+
   const fetchData = useCallback(async () => {
     if (!schoolId) return;
     try {
+      const yearParam = selectedYearId || undefined;
       const [classesRes, advisersRes] = await Promise.all([
-        classApi.getBySchoolId(schoolId),
-        classApi.getAvailableAdvisers(schoolId),
+        classApi.getBySchoolId(schoolId, yearParam),
+        selectedYearId ? classApi.getAvailableAdvisers(schoolId, selectedYearId) : Promise.resolve({ data: { data: [] } }),
       ]);
       setClasses(classesRes.data.data || []);
       setFaculties(advisersRes.data.data || []);
@@ -68,9 +92,16 @@ export default function ManageClasses() {
     } finally {
       setLoading(false);
     }
-  }, [schoolId]);
+  }, [schoolId, selectedYearId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // When school year changes, update create form default
+  useEffect(() => {
+    if (selectedYearId) {
+      setCreateForm(prev => ({ ...prev, school_year_id: selectedYearId as number }));
+    }
+  }, [selectedYearId]);
 
   // ========== DETAIL VIEW HELPERS ==========
   const openClassDetail = async (cls: ClassListItem) => {
@@ -100,9 +131,9 @@ export default function ManageClasses() {
   };
 
   const handleAssignFaculty = async () => {
-    if (!selectedClass || !selectedFacultyId) return;
+    if (!selectedClass || !selectedFacultyId || !selectedSubjectId) return;
     try {
-      await classApi.assignFaculty(selectedClass.id, selectedFacultyId, selectedSubjectId || undefined);
+      await classApi.assignFaculty(selectedClass.id, selectedFacultyId, selectedSubjectId);
       setToast({ message: "Teacher assigned", type: "success" });
       resetAssignModal();
       openClassDetail(selectedClass);
@@ -155,9 +186,9 @@ export default function ManageClasses() {
   };
 
   const handleReplaceFaculty = async () => {
-    if (!selectedClass || !updatingTeacher || !selectedReplacementId) return;
+    if (!selectedClass || !updatingTeacher || !selectedReplacementId || !updateSubjectId) return;
     try {
-      await classApi.replaceFaculty(selectedClass.id, updatingTeacher.id, selectedReplacementId, updateSubjectId || undefined);
+      await classApi.replaceFaculty(selectedClass.id, updatingTeacher.id, selectedReplacementId, updateSubjectId);
       setToast({ message: "Teacher replaced successfully", type: "success" });
       closeUpdateModal();
       openClassDetail(selectedClass);
@@ -171,10 +202,10 @@ export default function ManageClasses() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await classApi.create({ ...createForm, school_id: schoolId });
+      await classApi.create({ ...createForm, school_id: schoolId, school_year_id: selectedYearId as number });
       setToast({ message: "Class created successfully", type: "success" });
       setShowCreate(false);
-      setCreateForm({ class_name: "", faculty_id: "", school_id: schoolId, capacity: 30, section: "", grade_level: "", schedule: [] });
+      setCreateForm({ class_name: "", faculty_id: "", school_id: schoolId, school_year_id: selectedYearId as number, capacity: 30, section: "", grade_level: "", schedule: [] });
       fetchData();
     } catch (err: unknown) {
       setToast({ message: getApiErrorMessage(err, "Failed to create class"), type: "error" });
@@ -188,6 +219,7 @@ export default function ManageClasses() {
     setEditForm({
       class_name: c.class_name,
       faculty_id: c.faculty_id,
+      school_year_id: c.school_year_id,
       capacity: c.capacity ?? undefined,
       section: c.section ?? undefined,
       grade_level: c.grade_level ?? undefined,
@@ -446,7 +478,7 @@ export default function ManageClasses() {
                 <button
                   type="button"
                   className="mgmt-btn mgmt-btn--primary"
-                  disabled={!selectedFacultyId}
+                  disabled={!selectedFacultyId || !selectedSubjectId}
                   onClick={handleAssignFaculty}
                 >
                   Assign Teacher
@@ -512,7 +544,7 @@ export default function ManageClasses() {
                 <button
                   type="button"
                   className="mgmt-btn mgmt-btn--primary"
-                  disabled={!selectedReplacementId}
+                  disabled={!selectedReplacementId || !updateSubjectId}
                   onClick={handleReplaceFaculty}
                 >
                   Replace Teacher
@@ -591,15 +623,40 @@ export default function ManageClasses() {
           <h1 className="mgmt-title">Classes</h1>
           <p className="mgmt-subtitle">Manage classrooms for your school.</p>
         </div>
-        <button className="mgmt-btn mgmt-btn--primary" onClick={() => { setCreateForm({ class_name: "", faculty_id: "", school_id: schoolId, capacity: 30, section: "", grade_level: "", schedule: [] }); setShowCreate(true); }}>
-          + Add Class
-        </button>
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          {/* School Year Selector */}
+          {schoolYears.length > 0 && (
+            <select
+              className="mgmt-input mgmt-select"
+              value={selectedYearId}
+              onChange={(e) => setSelectedYearId(e.target.value ? Number(e.target.value) : "")}
+              style={{ fontSize: "0.8rem", minWidth: "160px" }}
+            >
+              <option value="">All School Years</option>
+              {schoolYears.map((sy) => (
+                <option key={sy.id} value={sy.id}>{sy.name}{sy.is_current === 1 ? " (Current)" : ""}</option>
+              ))}
+            </select>
+          )}
+          <button
+            className="mgmt-btn mgmt-btn--primary"
+            disabled={!selectedYearId}
+            onClick={() => {
+              setCreateForm({ class_name: "", faculty_id: "", school_id: schoolId, school_year_id: selectedYearId as number, capacity: 30, section: "", grade_level: "", schedule: [] });
+              setShowCreate(true);
+            }}
+          >
+            + Add Class
+          </button>
+        </div>
       </div>
 
       {loading ? (
         <div className="mgmt-loading">Loading...</div>
       ) : classes.length === 0 ? (
-        <div className="mgmt-empty">No classes yet. Add one to get started.</div>
+        <div className="mgmt-empty">
+          {selectedYearId ? "No classes for this school year. Add one to get started." : "Select a school year to view classes."}
+        </div>
       ) : (
         <div className="mgmt-card-grid">
           {classes.map((c) => (

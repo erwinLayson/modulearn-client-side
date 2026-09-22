@@ -11,6 +11,7 @@ export interface FacultyClassAssignment {
   id: string;
   class_name: string;
   school_id: number;
+  school_year_id: number;
   faculty_id: string;
   capacity: number | null;
   section: string | null;
@@ -30,6 +31,7 @@ export interface ClassListItem {
   faculty_id: string;
   faculty_name: string;
   school_id: number;
+  school_year_id: number;
   school_name?: string;
   capacity: number | null;
   section: string | null;
@@ -43,6 +45,7 @@ export interface ClassPayload {
   module_id?: string;
   faculty_id: string;
   school_id: number;
+  school_year_id: number;
   capacity?: number;
   section?: string;
   grade_level?: string;
@@ -53,6 +56,7 @@ export interface ClassUpdatePayload {
   class_name?: string;
   module_id?: string;
   faculty_id?: string;
+  school_year_id?: number;
   capacity?: number;
   section?: string;
   grade_level?: string;
@@ -64,7 +68,7 @@ export interface ClassFaculty {
   first_name: string;
   last_name: string;
   email: string;
-  subject_id: string | null;
+  subject_id: string;
   subject_name: string | null;
 }
 
@@ -222,8 +226,8 @@ export const classApi = {
   getAll: () =>
     apiClient.get<{ data: ClassListItem[] }>("/classes"),
 
-  getBySchoolId: (schoolId: number) =>
-    apiClient.get<{ data: ClassListItem[] }>(`/classes/school/${schoolId}`),
+  getBySchoolId: (schoolId: number, schoolYearId?: number) =>
+    apiClient.get<{ data: ClassListItem[] }>(`/classes/school/${schoolId}`, { params: schoolYearId ? { school_year_id: schoolYearId } : {} }),
 
   getAssignedClasses: (facultyId: string) =>
     apiClient.get<{ data: FacultyClassAssignment[] }>(`/classes/faculty/${facultyId}/assigned`),
@@ -258,10 +262,10 @@ export const classApi = {
   getFaculties: (id: string) =>
     apiClient.get<{ data: ClassFaculty[] }>(`/classes/${id}/faculties`),
 
-  assignFaculty: (id: string, facultyId: string, subjectId?: string) =>
+  assignFaculty: (id: string, facultyId: string, subjectId: string) =>
     apiClient.post<{ message: string; isOk: boolean }>(`/classes/${id}/faculties`, { faculty_id: facultyId, subject_id: subjectId }),
 
-  replaceFaculty: (id: string, oldFacultyId: string, newFacultyId: string, subjectId?: string) =>
+  replaceFaculty: (id: string, oldFacultyId: string, newFacultyId: string, subjectId: string) =>
     apiClient.put<{ message: string; isOk: boolean }>(`/classes/${id}/faculties/${oldFacultyId}`, { new_faculty_id: newFacultyId, subject_id: subjectId }),
 
   removeFaculty: (id: string, facultyId: string) =>
@@ -270,8 +274,8 @@ export const classApi = {
   getAvailableFaculties: (schoolId: number) =>
     apiClient.get<{ data: ClassFaculty[] }>(`/classes/faculties/school/${schoolId}`),
 
-  getAvailableAdvisers: (schoolId: number) =>
-    apiClient.get<{ data: ClassFaculty[] }>(`/classes/available-advisers/${schoolId}`),
+  getAvailableAdvisers: (schoolId: number, schoolYearId?: number) =>
+    apiClient.get<{ data: ClassFaculty[] }>(`/classes/available-advisers/${schoolId}`, { params: schoolYearId ? { school_year_id: schoolYearId } : {} }),
 };
 
 export const attendanceApi = {

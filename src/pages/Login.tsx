@@ -46,12 +46,9 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      if (!selectedSchoolId) {
-        setError("Please select a school");
-        setLoading(false);
-        return;
-      }
-      const { data } = await apiLogin({ email, password, school_id: Number(selectedSchoolId) });
+      const payload: { email: string; password: string; school_id?: number } = { email, password };
+      if (selectedSchoolId) payload.school_id = Number(selectedSchoolId);
+      const { data } = await apiLogin(payload);
       if (data.isOk && data.data?.user) {
         const backendUser = data.data.user;
         const firstName = backendUser.first_name ?? "";
@@ -126,12 +123,11 @@ export default function Login() {
                   value={selectedSchoolId}
                   onChange={(e) => setSelectedSchoolId(e.target.value ? Number(e.target.value) : "")}
                   className="auth-input"
-                  required
                   disabled={schoolsLoading}
                   style={{ appearance: "auto" }}
                 >
                   <option value="">
-                    {schoolsLoading ? "Loading schools..." : "Select your school"}
+                    {schoolsLoading ? "Loading schools..." : "Select your school (skip for Super Admin)"}
                   </option>
                   {schools.map((s) => (
                     <option key={s.school_id} value={s.school_id}>
