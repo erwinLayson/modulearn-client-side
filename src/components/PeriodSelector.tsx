@@ -57,7 +57,7 @@ export default function PeriodSelector({
         {showAllOption && <option value="">All Periods</option>}
         {periods.map((p) => (
           <option key={p.id} value={String(p.id)}>
-            {p.name} — {new Date(p.start_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}–{new Date(p.end_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {p.name} — {new Date(String(p.start_date)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}–{new Date(String(p.end_date)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </option>
         ))}
       </select>

@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { academicPeriodApi, type AcademicPeriod } from "../../api/academicPeriods";
 import apiClient from "../../api/client";
 import Toast from "../../components/Toast";
+import CredentialsSection from "../../components/CredentialsSection";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -257,7 +258,7 @@ export default function SchoolSettings() {
                                 style={{ fontSize: "0.8rem" }}
                               />
                             ) : (
-                              new Date(p.start_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                              new Date(String(p.start_date)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                             )}
                           </td>
                           <td style={{ padding: "0.75rem" }}>
@@ -270,7 +271,7 @@ export default function SchoolSettings() {
                                 style={{ fontSize: "0.8rem" }}
                               />
                             ) : (
-                              new Date(p.end_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                              new Date(String(p.end_date)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                             )}
                           </td>
                           <td style={{ padding: "0.75rem", textAlign: "center" }}>
@@ -315,6 +316,14 @@ export default function SchoolSettings() {
           )}
         </>
       )}
+
+      {/* Account Credentials */}
+      <div style={{ background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem", padding: "1.5rem", marginTop: "1.5rem" }}>
+        <h3 style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "1rem" }}>Account Credentials</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <CredentialsSection />
+        </div>
+      </div>
     </div>
   );
 }

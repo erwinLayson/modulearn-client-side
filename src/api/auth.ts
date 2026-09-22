@@ -37,3 +37,12 @@ export const login = (payload: LoginPayload) =>
 
 export const logout = () =>
   apiClient.post<{ message: string; isOk: boolean }>("/logout");
+
+export interface UpdateCredentialsPayload {
+  current_password: string;
+  email?: string;
+  password?: string;
+}
+
+export const updateCredentials = (payload: UpdateCredentialsPayload) =>
+  apiClient.put<{ message: string; isOk: boolean }>("/auth/credentials", payload);
