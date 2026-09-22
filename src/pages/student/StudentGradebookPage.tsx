@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { gradebookApi, type StudentSubjectGradeSummary } from "../../api/gradebook";
+import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
 const CATEGORY_ORDER = ["activities", "quizzes", "exams"] as const;
@@ -72,18 +74,24 @@ export default function StudentGradebookPage() {
   const [summary, setSummary] = useState<StudentSubjectGradeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
+  const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await gradebookApi.getStudentSummary();
+      if (user.school_id) {
+        const syRes = await schoolYearApi.getCurrent(user.school_id);
+        setCurrentSchoolYear(syRes.data.data || null);
+      }
+      const res = await gradebookApi.getStudentSummary(selectedPeriod || undefined);
       setSummary(res.data.data || []);
     } catch {
       // silently fail
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, selectedPeriod]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -215,6 +223,14 @@ export default function StudentGradebookPage() {
             {loading ? "Loading..." : summary.length > 0 ? `${summary.length} subject${summary.length !== 1 ? "s" : ""}` : "No grade data available yet."}
           </p>
         </div>
+        {user?.school_id && currentSchoolYear && (
+          <PeriodSelector
+            schoolId={user.school_id}
+            schoolYearId={currentSchoolYear.id}
+            value={selectedPeriod}
+            onChange={setSelectedPeriod}
+          />
+        )}
       </div>
 
       {!loading && summary.length > 0 && (

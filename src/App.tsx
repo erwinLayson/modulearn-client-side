@@ -25,6 +25,7 @@ import GradebookPage from "./pages/faculty/GradebookPage";
 import GradebookSubject from "./pages/faculty/GradebookSubject";
 import FacultyAttendancePage from "./pages/faculty/FacultyAttendancePage";
 import StudentGradebookPage from "./pages/student/StudentGradebookPage";
+import SchoolSettings from "./pages/school_admin/SchoolSettings";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -80,7 +81,7 @@ export default function App() {
               <Route path="gradebook" element={<GradebookPage />} />
               <Route path="gradebook/:classId/:subjectId" element={<GradebookSubject />} />
               <Route path="reports" element={<PlaceholderPage />} />
-              <Route path="settings" element={<PlaceholderPage />} />
+              <Route path="settings" element={<SchoolSettings />} />
               <Route path="grades" element={<StudentGradebookPage />} />
               <Route path="schedule" element={<PlaceholderPage />} />
             </Route>

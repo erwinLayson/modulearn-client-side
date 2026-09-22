@@ -8,7 +8,8 @@ import {
   type AttendanceHistoryItem,
 } from "../../api/classes";
 import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
-import { schoolYearApi } from "../../api/school-years";
+import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
 
@@ -57,6 +58,9 @@ export default function FacultyAttendancePage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState("");
+
   const today = new Date().toISOString().slice(0, 10);
 
   const editKey = (studentId: string, date: string, subjectId: string) => `${studentId}::${date}::${subjectId}`;
@@ -65,8 +69,12 @@ export default function FacultyAttendancePage() {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await classApi.getAssignedClasses(user.id);
+      const [res, syRes] = await Promise.all([
+        classApi.getAssignedClasses(user.id),
+        user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
+      ]);
       const assignments = res.data.data || [];
+      setCurrentSchoolYear(syRes.data.data || null);
       const todayRes = await attendanceApi.getHistory({ date_from: today, date_to: today, limit: 200 });
       const todayHistory: AttendanceHistoryItem[] = todayRes.data.data?.data || [];
       const todayMap = new Map<string, AttendanceHistoryItem>();
@@ -325,6 +333,14 @@ export default function FacultyAttendancePage() {
               {loading ? "Loading..." : `Track and manage attendance across your assigned classes.`}
             </p>
           </div>
+          {user?.school_id && currentSchoolYear && (
+            <PeriodSelector
+              schoolId={user.school_id}
+              schoolYearId={currentSchoolYear.id}
+              value={selectedPeriod}
+              onChange={setSelectedPeriod}
+            />
+          )}
         </div>
         {loading ? (
           <div className="mgmt-loading">Loading...</div>

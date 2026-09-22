@@ -70,18 +70,18 @@ export interface StudentSubjectGradeSummary {
 
 export const gradebookApi = {
   // Grading Weights
-  getWeights: (classId: string, subjectId: string) =>
-    apiClient.get<{ data: GradingWeight[] }>(`/gradebook/weights/${classId}/${subjectId}`),
+  getWeights: (classId: string, subjectId: string, periodId?: string) =>
+    apiClient.get<{ data: GradingWeight[] }>(`/gradebook/weights/${classId}/${subjectId}`, { params: periodId ? { period_id: periodId } : {} }),
 
-  updateWeights: (classId: string, subjectId: string, weights: { category: string; weight: number }[]) =>
-    apiClient.put<{ message: string }>(`/gradebook/weights/${classId}/${subjectId}`, { weights }),
+  updateWeights: (classId: string, subjectId: string, weights: { category: string; weight: number }[], periodId?: string) =>
+    apiClient.put<{ message: string }>(`/gradebook/weights/${classId}/${subjectId}`, { weights }, { params: periodId ? { period_id: periodId } : {} }),
 
   // Grade Items
-  getItems: (classId: string, subjectId: string, category?: string) =>
-    apiClient.get<{ data: GradeItem[] }>(`/gradebook/items/${classId}/${subjectId}`, { params: category ? { category } : {} }),
+  getItems: (classId: string, subjectId: string, category?: string, periodId?: string) =>
+    apiClient.get<{ data: GradeItem[] }>(`/gradebook/items/${classId}/${subjectId}`, { params: { ...(category ? { category } : {}), ...(periodId ? { period_id: periodId } : {}) } }),
 
-  createItem: (classId: string, subjectId: string, data: { category: string; title: string; max_score: number; due_date?: string | null }) =>
-    apiClient.post<{ data: { id: string; message: string } }>(`/gradebook/items/${classId}/${subjectId}`, data),
+  createItem: (classId: string, subjectId: string, data: { category: string; title: string; max_score: number; due_date?: string | null }, periodId?: string) =>
+    apiClient.post<{ data: { id: string; message: string } }>(`/gradebook/items/${classId}/${subjectId}`, data, { params: periodId ? { period_id: periodId } : {} }),
 
   updateItem: (id: string, data: { title: string; category: string; max_score: number; due_date?: string | null }) =>
     apiClient.put<{ message: string }>(`/gradebook/items/${id}`, data),
@@ -90,16 +90,16 @@ export const gradebookApi = {
     apiClient.delete<{ message: string }>(`/gradebook/items/${id}`),
 
   // Grades (Faculty)
-  getGrades: (classId: string, subjectId: string) =>
-    apiClient.get<{ data: GradesForSubjectResponse }>(`/gradebook/grades/${classId}/${subjectId}`),
+  getGrades: (classId: string, subjectId: string, periodId?: string) =>
+    apiClient.get<{ data: GradesForSubjectResponse }>(`/gradebook/grades/${classId}/${subjectId}`, { params: periodId ? { period_id: periodId } : {} }),
 
   upsertGrades: (gradeItemId: string, grades: { student_id: string; score: number }[]) =>
     apiClient.post<{ message: string }>(`/gradebook/grades/${gradeItemId}`, { grades }),
 
   // Student APIs
-  getStudentGrades: (classId: string, subjectId: string) =>
-    apiClient.get<{ data: StudentSubjectGradeSummary }>(`/gradebook/student/${classId}/${subjectId}`),
+  getStudentGrades: (classId: string, subjectId: string, periodId?: string) =>
+    apiClient.get<{ data: StudentSubjectGradeSummary }>(`/gradebook/student/${classId}/${subjectId}`, { params: periodId ? { period_id: periodId } : {} }),
 
-  getStudentSummary: () =>
-    apiClient.get<{ data: StudentSubjectGradeSummary[] }>("/gradebook/student-summary"),
+  getStudentSummary: (periodId?: string) =>
+    apiClient.get<{ data: StudentSubjectGradeSummary[] }>("/gradebook/student-summary", { params: periodId ? { period_id: periodId } : {} }),
 };

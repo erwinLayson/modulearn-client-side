@@ -16,6 +16,8 @@ interface SchoolForm {
   contact_number: string;
   school_logo: string;
   school_admin: string;
+  academic_system: string;
+  period_count: string;
 }
 
 const initialForm: SchoolForm = {
@@ -30,6 +32,8 @@ const initialForm: SchoolForm = {
   contact_number: "",
   school_logo: "",
   school_admin: "",
+  academic_system: "quarter",
+  period_count: "4",
 };
 
 const schoolLevels = [
@@ -71,6 +75,8 @@ export default function Register() {
         contact_number: form.contact_number,
         school_logo: form.school_logo,
         school_admin: form.school_admin,
+        academic_system: form.academic_system,
+        period_count: Number(form.period_count),
       };
       const { data } = await registerSchool(payload);
       if (data.isOk) {
@@ -319,6 +325,54 @@ export default function Register() {
                   />
                 </div>
               </div>
+            </section>
+
+            {/* academic configuration */}
+            <section className="reg-section animate-fade-slide-up" style={{ animationDelay: "0.25s" }}>
+              <h2 className="reg-section-title">Academic Configuration</h2>
+              <div className="form-grid form-grid--2">
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="reg-academic-system">
+                    Academic System
+                  </label>
+                  <select
+                    id="reg-academic-system"
+                    value={form.academic_system}
+                    onChange={(e) => {
+                      const system = e.target.value;
+                      setForm(prev => ({
+                        ...prev,
+                        academic_system: system,
+                        period_count: system === "quarter" ? "4" : "2",
+                      }));
+                    }}
+                    className="auth-select"
+                    required
+                  >
+                    <option value="quarter">Quarter System</option>
+                    <option value="semester">Semester System</option>
+                  </select>
+                </div>
+
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="reg-period-count">
+                    Number of {form.academic_system === "quarter" ? "Quarters" : "Semesters"}
+                  </label>
+                  <input
+                    id="reg-period-count"
+                    type="number"
+                    min="1"
+                    max="6"
+                    value={form.period_count}
+                    onChange={updateField("period_count")}
+                    className="auth-input auth-input--plain"
+                    required
+                  />
+                </div>
+              </div>
+              <p style={{ fontSize: "0.75rem", color: "var(--ml-text-muted)", marginTop: "0.5rem" }}>
+                Your school will have {form.period_count} {form.academic_system === "quarter" ? "quarter(s)" : "semester(s)"} per school year. You can customize period names and dates after registration.
+              </p>
             </section>
 
             {/* submit */}

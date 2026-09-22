@@ -1,20 +1,39 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { classApi, type FacultyClassAssignment } from "../../api/classes";
+import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
 export default function GradebookPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [assignments, setAssignments] = useState<FacultyClassAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period_id") || "");
+
+  const handlePeriodChange = (periodId: string) => {
+    setSelectedPeriod(periodId);
+    if (periodId) {
+      searchParams.set("period_id", periodId);
+    } else {
+      searchParams.delete("period_id");
+    }
+    setSearchParams(searchParams);
+  };
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const { data } = await classApi.getAssignedClasses(user.id);
-      setAssignments(data.data || []);
+      const [classesRes, syRes] = await Promise.all([
+        classApi.getAssignedClasses(user.id),
+        user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
+      ]);
+      setAssignments(classesRes.data.data || []);
+      setCurrentSchoolYear(syRes.data.data || null);
     } catch {
       // silently fail
     } finally {
@@ -39,6 +58,17 @@ export default function GradebookPage() {
         </div>
       </div>
 
+      {user?.school_id && currentSchoolYear && (
+        <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+          <PeriodSelector
+            schoolId={user.school_id}
+            schoolYearId={currentSchoolYear.id}
+            value={selectedPeriod}
+            onChange={handlePeriodChange}
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="mgmt-loading">Loading...</div>
       ) : assignments.length === 0 ? (
@@ -49,7 +79,12 @@ export default function GradebookPage() {
             <div
               key={assignment.id}
               className="mgmt-card mgmt-card--clickable"
-              onClick={() => assignment.subjects.length > 0 && navigate(`/dashboard/gradebook/${assignment.id}/${assignment.subjects[0].id}`)}
+              onClick={() => {
+                if (assignment.subjects.length > 0) {
+                  const url = `/dashboard/gradebook/${assignment.id}/${assignment.subjects[0].id}${selectedPeriod ? `?period_id=${selectedPeriod}` : ""}`;
+                  navigate(url);
+                }
+              }}
             >
               <div className="mgmt-card-top mgmt-card-top--blue" />
               <div className="mgmt-card-body">

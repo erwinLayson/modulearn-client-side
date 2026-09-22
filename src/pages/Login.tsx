@@ -1,28 +1,57 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BackHome from "../components/BackHome";
 import Toast from "../components/Toast";
 import { login as apiLogin } from "../api/auth";
+import apiClient from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import type { UserRole } from "../constant/users";
+
+interface SchoolOption {
+  school_id: number;
+  school_name: string;
+}
 
 export default function Login() {
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedSchoolId, setSelectedSchoolId] = useState<number | "">("");
+  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const dismissToast = useCallback(() => setToast(null), []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await apiClient.get<{ data: SchoolOption[] }>("/schools/list");
+        if (!cancelled) setSchools(data.data || []);
+      } catch {
+        // silently fail — school selector will be empty
+      } finally {
+        if (!cancelled) setSchoolsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const { data } = await apiLogin({ email, password });
+      if (!selectedSchoolId) {
+        setError("Please select a school");
+        setLoading(false);
+        return;
+      }
+      const { data } = await apiLogin({ email, password, school_id: Number(selectedSchoolId) });
       if (data.isOk && data.data?.user) {
         const backendUser = data.data.user;
         const firstName = backendUser.first_name ?? "";
@@ -38,6 +67,7 @@ export default function Login() {
           role: backendUser.role as UserRole,
           school_id: backendUser.school_id,
           school_name: backendUser.school_name as string | undefined,
+          academic_config_completed: backendUser.academic_config_completed as boolean | undefined,
         });
         setToast({ message: "Login successful! Redirecting...", type: "success" });
         setTimeout(() => navigate("/dashboard"), 1500);
@@ -80,6 +110,37 @@ export default function Login() {
                 {error}
               </div>
             )}
+
+            <div className="auth-field animate-fade-slide-up" style={{ animationDelay: "0.02s" }}>
+              <label className="auth-label" htmlFor="login-school">
+                School
+              </label>
+              <div className="relative">
+                <span className="auth-input-icon">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+                  </svg>
+                </span>
+                <select
+                  id="login-school"
+                  value={selectedSchoolId}
+                  onChange={(e) => setSelectedSchoolId(e.target.value ? Number(e.target.value) : "")}
+                  className="auth-input"
+                  required
+                  disabled={schoolsLoading}
+                  style={{ appearance: "auto" }}
+                >
+                  <option value="">
+                    {schoolsLoading ? "Loading schools..." : "Select your school"}
+                  </option>
+                  {schools.map((s) => (
+                    <option key={s.school_id} value={s.school_id}>
+                      {s.school_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <div className="auth-field animate-fade-slide-up" style={{ animationDelay: "0.05s" }}>
               <label className="auth-label" htmlFor="login-email">

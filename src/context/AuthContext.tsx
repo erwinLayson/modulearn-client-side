@@ -8,6 +8,7 @@ export interface AuthUser {
   role: UserRole;
   school_id?: number;
   school_name?: string;
+  academic_config_completed?: boolean;
 }
 
 function getStoredUser(): AuthUser | null {
@@ -25,6 +26,7 @@ function getStoredUser(): AuthUser | null {
       role: parsed.role,
       school_id: parsed.school_id,
       school_name: parsed.school_name,
+      academic_config_completed: parsed.academic_config_completed,
     };
   } catch {
     return null;

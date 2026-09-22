@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory } from "../../api/gradebook";
+import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import { useAuth } from "../../context/AuthContext";
+import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
 
@@ -34,6 +37,20 @@ interface EnrichedStudent {
 export default function GradebookSubject() {
   const { classId, subjectId } = useParams<{ classId: string; subjectId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period_id") || "");
+
+  const handlePeriodChange = (periodId: string) => {
+    setSelectedPeriod(periodId);
+    if (periodId) {
+      searchParams.set("period_id", periodId);
+    } else {
+      searchParams.delete("period_id");
+    }
+    setSearchParams(searchParams);
+  };
 
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -60,10 +77,17 @@ export default function GradebookSubject() {
     if (!classId || !subjectId) return;
     setLoading(true);
     try {
+      // Get current school year
+      if (user?.school_id) {
+        const syRes = await schoolYearApi.getCurrent(user.school_id);
+        setCurrentSchoolYear(syRes.data.data || null);
+      }
+
+      const periodParam = selectedPeriod || undefined;
       const [weightsRes, itemsRes, gradesRes] = await Promise.all([
-        gradebookApi.getWeights(classId, subjectId),
-        gradebookApi.getItems(classId, subjectId),
-        gradebookApi.getGrades(classId, subjectId),
+        gradebookApi.getWeights(classId, subjectId, periodParam),
+        gradebookApi.getItems(classId, subjectId, undefined, periodParam),
+        gradebookApi.getGrades(classId, subjectId, periodParam),
       ]);
       const w = weightsRes.data.data || [];
       const wMap: Record<string, number> = {};
@@ -87,7 +111,7 @@ export default function GradebookSubject() {
     } finally {
       setLoading(false);
     }
-  }, [classId, subjectId]);
+  }, [classId, subjectId, selectedPeriod, user?.school_id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -358,7 +382,7 @@ export default function GradebookSubject() {
 
       {/* Header */}
       <div className="mgmt-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
           <button
             className="mgmt-btn mgmt-btn--ghost"
             onClick={() => navigate("/dashboard/gradebook")}
@@ -374,6 +398,14 @@ export default function GradebookSubject() {
             <p className="mgmt-subtitle">Manage grades, weights, and items for this subject.</p>
           </div>
         </div>
+        {user?.school_id && currentSchoolYear && (
+          <PeriodSelector
+            schoolId={user.school_id}
+            schoolYearId={currentSchoolYear.id}
+            value={selectedPeriod}
+            onChange={handlePeriodChange}
+          />
+        )}
       </div>
 
       {/* Grading Weights */}

@@ -78,6 +78,8 @@ export default function SchoolAdminDashboard() {
 
   if (!user) return null;
 
+  const showSetupPrompt = user.role === "school_admin" && user.academic_config_completed === false;
+
   return (
     <div className="dash-page">
       <div className="dash-welcome">
@@ -86,6 +88,46 @@ export default function SchoolAdminDashboard() {
           Welcome back, <strong>{user.name}</strong>. Manage <strong>{user.school_name}</strong>.
         </p>
       </div>
+
+      {showSetupPrompt && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "1rem 1.5rem",
+          marginBottom: "1.5rem",
+          background: "rgba(13, 110, 253, 0.08)",
+          border: "1px solid rgba(13, 110, 253, 0.2)",
+          borderRadius: "0.75rem",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ml-accent)" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: "0.875rem" }}>Complete your academic configuration</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8125rem", color: "var(--ml-text-muted)" }}>
+                Set up your academic system (quarter/semester) to enable grading periods and attendance tracking.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/dashboard/settings"
+            style={{
+              padding: "0.5rem 1rem",
+              background: "var(--ml-accent)",
+              color: "white",
+              borderRadius: "0.5rem",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Configure Now
+          </a>
+        </div>
+      )}
 
       <div className="dash-grid">
         <div className="dash-stat-card dash-stat-card--accent">

@@ -3,6 +3,7 @@ import apiClient from "./client";
 export interface LoginPayload {
   email: string;
   password: string;
+  school_id?: number;
 }
 
 export interface UserData {

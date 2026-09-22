@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { attendanceApi, type StudentSubjectAttendance, type StudentAttendanceRecord } from "../../api/classes";
-import { schoolYearApi } from "../../api/school-years";
+import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
 function getStatusColor(rate: number): string {
@@ -36,6 +37,8 @@ export default function StudentAttendancePage() {
   const [subjectFilter, setSubjectFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState("");
 
   useEffect(() => {
     if (!user?.school_id) return;
@@ -45,6 +48,7 @@ export default function StudentAttendancePage() {
         const syRes = await schoolYearApi.getCurrent(user.school_id!);
         const sy = syRes.data.data;
         if (cancelled || !sy) return;
+        setCurrentSchoolYear(sy);
         const res = await attendanceApi.getStudentBySubject(sy.id);
         if (!cancelled) setSubjects(res.data.data || []);
       } catch {
@@ -122,6 +126,14 @@ export default function StudentAttendancePage() {
             {loading ? "Loading..." : subjects.length > 0 ? `${subjects.length} subject${subjects.length !== 1 ? "s" : ""}` : "No attendance records yet."}
           </p>
         </div>
+        {user?.school_id && currentSchoolYear && (
+          <PeriodSelector
+            schoolId={user.school_id}
+            schoolYearId={currentSchoolYear.id}
+            value={selectedPeriod}
+            onChange={setSelectedPeriod}
+          />
+        )}
       </div>
 
       {/* Summary Cards */}
