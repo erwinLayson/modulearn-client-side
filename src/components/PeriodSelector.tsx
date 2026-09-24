@@ -7,6 +7,7 @@ interface PeriodSelectorProps {
   value: string;
   onChange: (periodId: string) => void;
   showAllOption?: boolean;
+  disabled?: boolean;
 }
 
 export default function PeriodSelector({
@@ -15,6 +16,7 @@ export default function PeriodSelector({
   value,
   onChange,
   showAllOption = true,
+  disabled = false,
 }: PeriodSelectorProps) {
   const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ export default function PeriodSelector({
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "150px" }}>
-        <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Period</label>
+        <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Academic Period</label>
         <select className="mgmt-input" disabled style={{ fontSize: "0.8rem" }}>
           <option>Loading...</option>
         </select>
@@ -47,14 +49,19 @@ export default function PeriodSelector({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "150px" }}>
-      <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Period</label>
+      <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Academic Period</label>
       <select
         className="mgmt-input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         style={{ fontSize: "0.8rem" }}
       >
-        {showAllOption && <option value="">All Periods</option>}
+        {showAllOption ? (
+          <option value="">All Periods</option>
+        ) : (
+          <option value="" disabled hidden>Select academic period</option>
+        )}
         {periods.map((p) => (
           <option key={p.id} value={String(p.id)}>
             {p.name} — {new Date(String(p.start_date)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}–{new Date(String(p.end_date)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

@@ -119,7 +119,7 @@ export default function GradebookPage() {
                           key={subject.id}
                           className="dash-badge dash-badge--completed"
                           style={{ fontSize: "0.7rem", cursor: "pointer" }}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/gradebook/${assignment.id}/${subject.id}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/gradebook/${assignment.id}/${subject.id}${selectedPeriod ? `?period_id=${selectedPeriod}` : ""}`); }}
                         >
                           {subject.name}
                         </span>

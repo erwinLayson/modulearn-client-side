@@ -157,6 +157,7 @@ export default function ClassesPage({ role }: ClassesPageProps) {
         map.set(a.id, { key: `taught-${a.id}`, cls: {
           id: a.id, class_name: a.class_name, module_id: "", module_title: "",
           faculty_id: a.faculty_id, faculty_name: a.faculty_name, school_id: a.school_id,
+          school_year_id: a.school_year_id,
           capacity: a.capacity, section: a.section, grade_level: a.grade_level,
           schedule: a.schedule, created_at: a.created_at,
         }, advisory: false, subjects });

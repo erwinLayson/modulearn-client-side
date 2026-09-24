@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { gradebookApi, type StudentSubjectGradeSummary } from "../../api/gradebook";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import { resolveCurrentPeriodId } from "../../api/academicPeriods";
 import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
@@ -75,23 +77,60 @@ export default function StudentGradebookPage() {
   const [loading, setLoading] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
   const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period_id") || "");
+  const [periodResolved, setPeriodResolved] = useState(() => Boolean(searchParams.get("period_id")));
+
+  const handlePeriodChange = (periodId: string) => {
+    setSelectedPeriod(periodId);
+    const next = new URLSearchParams(searchParams);
+    if (periodId) {
+      next.set("period_id", periodId);
+    } else {
+      next.delete("period_id");
+    }
+    setSearchParams(next);
+  };
+
+  // Resolve the default academic period when the URL has no period_id
+  useEffect(() => {
+    if (periodResolved) return;
+    if (!user || !user.school_id) return;
+    const schoolId = user.school_id;
+    let cancelled = false;
+    (async () => {
+      const periodId = await resolveCurrentPeriodId(schoolId);
+      if (cancelled) return;
+      if (periodId !== null) {
+        setSelectedPeriod(String(periodId));
+        const next = new URLSearchParams(searchParams);
+        next.set("period_id", String(periodId));
+        setSearchParams(next, { replace: true });
+      }
+      setPeriodResolved(true);
+    })();
+    return () => { cancelled = true; };
+  }, [periodResolved, user, searchParams, setSearchParams]);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !periodResolved) return;
     try {
       if (user.school_id) {
         const syRes = await schoolYearApi.getCurrent(user.school_id);
         setCurrentSchoolYear(syRes.data.data || null);
       }
-      const res = await gradebookApi.getStudentSummary(selectedPeriod || undefined);
+      if (!selectedPeriod) {
+        setSummary([]);
+        return;
+      }
+      const res = await gradebookApi.getStudentSummary(selectedPeriod);
       setSummary(res.data.data || []);
     } catch {
       // silently fail
     } finally {
       setLoading(false);
     }
-  }, [user, selectedPeriod]);
+  }, [user, selectedPeriod, periodResolved]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -228,7 +267,8 @@ export default function StudentGradebookPage() {
             schoolId={user.school_id}
             schoolYearId={currentSchoolYear.id}
             value={selectedPeriod}
-            onChange={setSelectedPeriod}
+            onChange={handlePeriodChange}
+            showAllOption={false}
           />
         )}
       </div>

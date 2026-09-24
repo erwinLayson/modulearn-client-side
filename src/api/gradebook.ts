@@ -18,6 +18,7 @@ export interface GradeItem {
   title: string;
   max_score: number;
   due_date: string | null;
+  period_id: number | null;
   created_at: string;
 }
 
@@ -48,7 +49,7 @@ export interface GradesForSubjectResponse {
   class: { id: string; name: string; section: string | null; grade_level: string | null };
   subject: { id: string };
   weights: { category: GradingCategory; weight: number }[];
-  items: { id: string; category: GradeItemCategory; title: string; max_score: number; due_date: string | null }[];
+  items: { id: string; category: GradeItemCategory; title: string; max_score: number; due_date: string | null; period_id: number | null }[];
   students: StudentGrade[];
 }
 
@@ -70,20 +71,20 @@ export interface StudentSubjectGradeSummary {
 
 export const gradebookApi = {
   // Grading Weights
-  getWeights: (classId: string, subjectId: string, periodId?: string) =>
-    apiClient.get<{ data: GradingWeight[] }>(`/gradebook/weights/${classId}/${subjectId}`, { params: periodId ? { period_id: periodId } : {} }),
+  getWeights: (classId: string, subjectId: string) =>
+    apiClient.get<{ data: GradingWeight[] }>(`/gradebook/weights/${classId}/${subjectId}`),
 
-  updateWeights: (classId: string, subjectId: string, weights: { category: string; weight: number }[], periodId?: string) =>
-    apiClient.put<{ message: string }>(`/gradebook/weights/${classId}/${subjectId}`, { weights }, { params: periodId ? { period_id: periodId } : {} }),
+  updateWeights: (classId: string, subjectId: string, weights: { category: string; weight: number }[]) =>
+    apiClient.put<{ message: string }>(`/gradebook/weights/${classId}/${subjectId}`, { weights }),
 
   // Grade Items
   getItems: (classId: string, subjectId: string, category?: string, periodId?: string) =>
     apiClient.get<{ data: GradeItem[] }>(`/gradebook/items/${classId}/${subjectId}`, { params: { ...(category ? { category } : {}), ...(periodId ? { period_id: periodId } : {}) } }),
 
-  createItem: (classId: string, subjectId: string, data: { category: string; title: string; max_score: number; due_date?: string | null }, periodId?: string) =>
-    apiClient.post<{ data: { id: string; message: string } }>(`/gradebook/items/${classId}/${subjectId}`, data, { params: periodId ? { period_id: periodId } : {} }),
+  createItem: (classId: string, subjectId: string, data: { category: string; title: string; max_score: number; due_date?: string | null; period_id: number }) =>
+    apiClient.post<{ data: { id: string; message: string } }>(`/gradebook/items/${classId}/${subjectId}`, data),
 
-  updateItem: (id: string, data: { title: string; category: string; max_score: number; due_date?: string | null }) =>
+  updateItem: (id: string, data: { title: string; category: string; max_score: number; due_date?: string | null; period_id: number }) =>
     apiClient.put<{ message: string }>(`/gradebook/items/${id}`, data),
 
   deleteItem: (id: string) =>

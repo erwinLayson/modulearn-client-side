@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory } from "../../api/gradebook";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import { resolveCurrentPeriodId } from "../../api/academicPeriods";
 import { useAuth } from "../../context/AuthContext";
 import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
@@ -41,6 +42,7 @@ export default function GradebookSubject() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState(searchParams.get("period_id") || "");
+  const [periodResolved, setPeriodResolved] = useState(() => Boolean(searchParams.get("period_id")));
 
   const handlePeriodChange = (periodId: string) => {
     setSelectedPeriod(periodId);
@@ -63,7 +65,7 @@ export default function GradebookSubject() {
   const [items, setItems] = useState<GradeItem[]>([]);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<GradeSheetItem | null>(null);
-  const [itemForm, setItemForm] = useState({ title: "", category: "activities" as GradeItemCategory, max_score: 100, due_date: "" });
+  const [itemForm, setItemForm] = useState({ title: "", category: "activities" as GradeItemCategory, max_score: 100, due_date: "", period_id: "" });
   const [itemSaving, setItemSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -73,29 +75,74 @@ export default function GradebookSubject() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeCell, setActiveCell] = useState<{ studentId: string; itemId: string } | null>(null);
 
-  const fetchData = useCallback(async () => {
+  // Load current school year once (needed by the period selector)
+  useEffect(() => {
+    const schoolId = user?.school_id;
+    if (!schoolId) return;
+    let cancelled = false;
+    schoolYearApi.getCurrent(schoolId)
+      .then(res => { if (!cancelled) setCurrentSchoolYear(res.data.data || null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.school_id]);
+
+  // Resolve the default academic period when the URL has no period_id
+  useEffect(() => {
+    if (periodResolved) return;
+    if (!user || !user.school_id) return;
+    const schoolId = user.school_id;
+    let cancelled = false;
+    (async () => {
+      const periodId = await resolveCurrentPeriodId(schoolId);
+      if (cancelled) return;
+      if (periodId !== null) {
+        setSelectedPeriod(String(periodId));
+        const next = new URLSearchParams(searchParams);
+        next.set("period_id", String(periodId));
+        setSearchParams(next, { replace: true });
+      }
+      setPeriodResolved(true);
+    })();
+    return () => { cancelled = true; };
+  }, [periodResolved, user, searchParams, setSearchParams]);
+
+  // Global grading weights: load once per class+subject, independent of the selected period
+  useEffect(() => {
     if (!classId || !subjectId) return;
+    let cancelled = false;
+    gradebookApi.getWeights(classId, subjectId)
+      .then(res => {
+        if (cancelled) return;
+        const w = res.data.data || [];
+        const wMap: Record<string, number> = {};
+        for (const cat of CATEGORY_ORDER) {
+          const found = w.find(x => x.category === cat);
+          wMap[cat] = found ? found.weight : 0;
+        }
+        setEditWeights(wMap);
+        setWeightsChanged(false);
+      })
+      .catch(() => {
+        if (!cancelled) setToast({ message: "Failed to load grading weights", type: "error" });
+      });
+    return () => { cancelled = true; };
+  }, [classId, subjectId]);
+
+  // Grade Sheet data: always scoped to the selected academic period
+  const fetchSheet = useCallback(async () => {
+    if (!classId || !subjectId || !periodResolved) return;
     setLoading(true);
     try {
-      // Get current school year
-      if (user?.school_id) {
-        const syRes = await schoolYearApi.getCurrent(user.school_id);
-        setCurrentSchoolYear(syRes.data.data || null);
+      if (!selectedPeriod) {
+        setItems([]);
+        setGradeData(null);
+        setScores({});
+        return;
       }
-
-      const periodParam = selectedPeriod || undefined;
-      const [weightsRes, itemsRes, gradesRes] = await Promise.all([
-        gradebookApi.getWeights(classId, subjectId, periodParam),
-        gradebookApi.getItems(classId, subjectId, undefined, periodParam),
-        gradebookApi.getGrades(classId, subjectId, periodParam),
+      const [itemsRes, gradesRes] = await Promise.all([
+        gradebookApi.getItems(classId, subjectId, undefined, selectedPeriod),
+        gradebookApi.getGrades(classId, subjectId, selectedPeriod),
       ]);
-      const w = weightsRes.data.data || [];
-      const wMap: Record<string, number> = {};
-      for (const cat of CATEGORY_ORDER) {
-        const found = w.find(x => x.category === cat);
-        wMap[cat] = found ? found.weight : 0;
-      }
-      setEditWeights(wMap);
       setItems(itemsRes.data.data || []);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
@@ -111,9 +158,9 @@ export default function GradebookSubject() {
     } finally {
       setLoading(false);
     }
-  }, [classId, subjectId, selectedPeriod, user?.school_id]);
+  }, [classId, subjectId, selectedPeriod, periodResolved]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchSheet(); }, [fetchSheet]);
 
   const groupedItems = useMemo(() => {
     if (!gradeData) return {} as Record<GradeItemCategory, GradeSheetItem[]>;
@@ -180,6 +227,10 @@ export default function GradebookSubject() {
       setToast({ message: "Max score must be greater than 0", type: "error" });
       return;
     }
+    if (!itemForm.period_id) {
+      setToast({ message: "Academic period is required", type: "error" });
+      return;
+    }
     setItemSaving(true);
     try {
       await gradebookApi.createItem(classId, subjectId, {
@@ -187,12 +238,14 @@ export default function GradebookSubject() {
         title: itemForm.title.trim(),
         max_score: itemForm.max_score,
         due_date: itemForm.due_date || null,
+        period_id: Number(itemForm.period_id),
       });
       setToast({ message: "Grade item created", type: "success" });
       closeItemModal();
-      const itemsRes = await gradebookApi.getItems(classId, subjectId);
+      const periodParam = selectedPeriod || undefined;
+      const itemsRes = await gradebookApi.getItems(classId, subjectId, undefined, periodParam);
       setItems(itemsRes.data.data || []);
-      const gradesRes = await gradebookApi.getGrades(classId, subjectId);
+      const gradesRes = await gradebookApi.getGrades(classId, subjectId, periodParam);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
       for (const s of gradesRes.data.data.students) {
@@ -216,6 +269,10 @@ export default function GradebookSubject() {
       setToast({ message: "Title is required", type: "error" });
       return;
     }
+    if (!itemForm.period_id) {
+      setToast({ message: "Academic period is required", type: "error" });
+      return;
+    }
     setItemSaving(true);
     try {
       await gradebookApi.updateItem(editingItem.id, {
@@ -223,12 +280,14 @@ export default function GradebookSubject() {
         category: itemForm.category,
         max_score: itemForm.max_score,
         due_date: itemForm.due_date || null,
+        period_id: Number(itemForm.period_id),
       });
       setToast({ message: "Grade item updated", type: "success" });
       closeItemModal();
-      const itemsRes = await gradebookApi.getItems(classId, subjectId!);
+      const periodParam = selectedPeriod || undefined;
+      const itemsRes = await gradebookApi.getItems(classId, subjectId!, undefined, periodParam);
       setItems(itemsRes.data.data || []);
-      const gradesRes = await gradebookApi.getGrades(classId, subjectId!);
+      const gradesRes = await gradebookApi.getGrades(classId, subjectId!, periodParam);
       setGradeData(gradesRes.data.data);
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Failed to update grade item";
@@ -243,9 +302,10 @@ export default function GradebookSubject() {
     try {
       await gradebookApi.deleteItem(itemId);
       setToast({ message: "Grade item deleted", type: "success" });
-      const itemsRes = await gradebookApi.getItems(classId!, subjectId!);
+      const periodParam = selectedPeriod || undefined;
+      const itemsRes = await gradebookApi.getItems(classId!, subjectId!, undefined, periodParam);
       setItems(itemsRes.data.data || []);
-      const gradesRes = await gradebookApi.getGrades(classId!, subjectId!);
+      const gradesRes = await gradebookApi.getGrades(classId!, subjectId!, periodParam);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
       for (const s of gradesRes.data.data.students) {
@@ -264,7 +324,7 @@ export default function GradebookSubject() {
 
   const openCreateItem = () => {
     setEditingItem(null);
-    setItemForm({ title: "", category: "activities", max_score: 100, due_date: "" });
+    setItemForm({ title: "", category: "activities", max_score: 100, due_date: "", period_id: selectedPeriod });
     setShowItemModal(true);
   };
 
@@ -276,6 +336,7 @@ export default function GradebookSubject() {
       category: item.category,
       max_score: item.max_score,
       due_date: item.due_date || "",
+      period_id: item.period_id !== null && item.period_id !== undefined ? String(item.period_id) : "",
     });
     setShowItemModal(true);
   };
@@ -283,7 +344,7 @@ export default function GradebookSubject() {
   const closeItemModal = () => {
     setShowItemModal(false);
     setEditingItem(null);
-    setItemForm({ title: "", category: "activities", max_score: 100, due_date: "" });
+    setItemForm({ title: "", category: "activities", max_score: 100, due_date: "", period_id: "" });
   };
 
   const handleScoreChange = (studentId: string, itemId: string, value: string) => {
@@ -331,7 +392,7 @@ export default function GradebookSubject() {
       }
       setToast({ message: "Grades saved successfully", type: "success" });
       setHasUnsavedChanges(false);
-      const gradesRes = await gradebookApi.getGrades(classId!, subjectId!);
+      const gradesRes = await gradebookApi.getGrades(classId!, subjectId!, selectedPeriod || undefined);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
       for (const s of gradesRes.data.data.students) {
@@ -404,6 +465,7 @@ export default function GradebookSubject() {
             schoolYearId={currentSchoolYear.id}
             value={selectedPeriod}
             onChange={handlePeriodChange}
+            showAllOption={false}
           />
         )}
       </div>
@@ -473,6 +535,11 @@ export default function GradebookSubject() {
           </div>
         </div>
       </div>
+
+      {/* Empty state: no academic period configured */}
+      {periodResolved && !selectedPeriod && (
+        <div className="mgmt-empty">No academic period is configured. Set a current academic period to use the Grade Sheet.</div>
+      )}
 
       {/* Grade Spreadsheet */}
       {gradeData && gradeData.students.length > 0 && (
@@ -761,14 +828,35 @@ export default function GradebookSubject() {
                     />
                   </div>
                 </div>
-                <div className="mgmt-form-row">
-                  <label className="mgmt-label">Due Date <span style={{ fontWeight: 400, color: "var(--ml-text-muted)" }}>(optional)</span></label>
-                  <input
-                    type="date"
-                    className="mgmt-input"
-                    value={itemForm.due_date}
-                    onChange={(e) => setItemForm(prev => ({ ...prev, due_date: e.target.value }))}
-                  />
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="mgmt-form-row">
+                    <label className="mgmt-label">Due Date <span style={{ fontWeight: 400, color: "var(--ml-text-muted)" }}>(optional)</span></label>
+                    <input
+                      type="date"
+                      className="mgmt-input"
+                      value={itemForm.due_date}
+                      onChange={(e) => setItemForm(prev => ({ ...prev, due_date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="mgmt-form-row">
+                    {user?.school_id && currentSchoolYear ? (
+                      <PeriodSelector
+                        schoolId={user.school_id}
+                        schoolYearId={currentSchoolYear.id}
+                        value={itemForm.period_id}
+                        onChange={(periodId) => setItemForm(prev => ({ ...prev, period_id: periodId }))}
+                        showAllOption={false}
+                        disabled={!!(editingItem && editingItem.period_id !== null && editingItem.period_id !== undefined)}
+                      />
+                    ) : (
+                      <>
+                        <label className="mgmt-label">Academic Period</label>
+                        <select className="mgmt-input" disabled value="">
+                          <option>Loading...</option>
+                        </select>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

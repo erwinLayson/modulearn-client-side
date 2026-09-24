@@ -173,10 +173,22 @@ export interface AttendanceHistoryFilters {
   subject_id?: string;
   student_id?: string;
   teacher_id?: string;
+  period_id?: number;
   date_from?: string;
   date_to?: string;
   page?: number;
   limit?: number;
+}
+
+export interface AttendanceSessionItem {
+  id: number;
+  class_id: string;
+  subject_id: string;
+  attendance_date: string;
+  period_id: number;
+  period_name: string;
+  created_by: string;
+  created_at: string;
 }
 
 export interface SchoolAttendanceMatrixItem {
@@ -241,11 +253,11 @@ export const classApi = {
   editAttendance: (classId: string, payload: AttendanceMarkPayload & { date: string }) =>
     apiClient.put<{ message: string; isOk: boolean }>(`/attendance/class/${classId}`, payload),
 
-  createAttendanceSession: (payload: { class_id: string; subject_id: string; date: string }) =>
+  createAttendanceSession: (payload: { class_id: string; subject_id: string; date: string; period_id: number }) =>
     apiClient.post<{ message: string; isOk: boolean }>("/attendance/sessions", payload),
 
-  getClassSessions: (classId: string) =>
-    apiClient.get<{ data: { attendance_date: string; subject_id: string; subject_name: string }[] }>(`/attendance/sessions/${classId}`),
+  getClassSessions: (classId: string, periodId?: string) =>
+    apiClient.get<{ data: AttendanceSessionItem[] }>(`/attendance/sessions/${classId}`, { params: periodId ? { period_id: periodId } : {} }),
 
   getById: (id: string) =>
     apiClient.get<{ data: ClassListItem }>(`/classes/${id}`),

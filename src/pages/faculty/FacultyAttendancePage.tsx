@@ -40,6 +40,7 @@ export default function FacultyAttendancePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSubjectId, setCreateSubjectId] = useState("");
   const [createDate, setCreateDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [createPeriodId, setCreatePeriodId] = useState("");
 
   const [histSubjectFilter, setHistSubjectFilter] = useState("");
   const [histDateFrom, setHistDateFrom] = useState("");
@@ -75,12 +76,13 @@ export default function FacultyAttendancePage() {
       ]);
       const assignments = res.data.data || [];
       setCurrentSchoolYear(syRes.data.data || null);
-      const todayRes = await attendanceApi.getHistory({ date_from: today, date_to: today, limit: 200 });
+      const periodParam = selectedPeriod ? Number(selectedPeriod) : undefined;
+      const todayRes = await attendanceApi.getHistory({ date_from: today, date_to: today, limit: 200, ...(periodParam ? { period_id: periodParam } : {}) });
       const todayHistory: AttendanceHistoryItem[] = todayRes.data.data?.data || [];
       const todayMap = new Map<string, AttendanceHistoryItem>();
       for (const h of todayHistory) todayMap.set(`${h.class_id}::${h.subject_id}`, h);
 
-      const allHistoryRes = await attendanceApi.getHistory({ limit: 500 });
+      const allHistoryRes = await attendanceApi.getHistory({ limit: 500, ...(periodParam ? { period_id: periodParam } : {}) });
       const allHistory: AttendanceHistoryItem[] = allHistoryRes.data.data?.data || [];
       const sessionCountMap = new Map<string, Set<string>>();
       for (const h of allHistory) {
@@ -105,7 +107,7 @@ export default function FacultyAttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [user, today]);
+  }, [user, today, selectedPeriod]);
 
   useEffect(() => { loadClassCards(); }, [loadClassCards]);
 
@@ -134,14 +136,27 @@ export default function FacultyAttendancePage() {
     if (!selectedClass) return;
     setAttLoading(true);
     try {
-      const res = await attendanceApi.getHistory({ class_id: selectedClass.id, limit: 200 });
-      const sessions: AttendanceHistoryItem[] = res.data.data?.data || [];
+      const periodParam = selectedPeriod || undefined;
+      const [sessRes, histRes] = await Promise.all([
+        classApi.getClassSessions(selectedClass.id, periodParam),
+        attendanceApi.getHistory({ class_id: selectedClass.id, limit: 200, ...(selectedPeriod ? { period_id: Number(selectedPeriod) } : {}) }),
+      ]);
+      const apiSessions: { attendance_date: string; subject_id: string }[] = sessRes.data.data || [];
+      const history: AttendanceHistoryItem[] = histRes.data.data?.data || [];
 
       const sessionMap = new Map<string, { date: string; subject_id: string; subject_name: string }>();
-      for (const s of sessions) {
+      for (const s of apiSessions) {
         const dateOnly = s.attendance_date.slice(0, 10);
         const key = `${dateOnly}::${s.subject_id}`;
-        if (!sessionMap.has(key)) sessionMap.set(key, { date: dateOnly, subject_id: s.subject_id, subject_name: s.subject_name });
+        if (!sessionMap.has(key)) {
+          const subjectName = (selectedClass.subjects || []).find(x => x.id === s.subject_id)?.name || "Subject";
+          sessionMap.set(key, { date: dateOnly, subject_id: s.subject_id, subject_name: subjectName });
+        }
+      }
+      for (const h of history) {
+        const dateOnly = h.attendance_date.slice(0, 10);
+        const key = `${dateOnly}::${h.subject_id}`;
+        if (!sessionMap.has(key)) sessionMap.set(key, { date: dateOnly, subject_id: h.subject_id, subject_name: h.subject_name });
       }
       const sortedSessions = [...sessionMap.values()].sort((a, b) => {
         const dateCmp = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -163,7 +178,7 @@ export default function FacultyAttendancePage() {
       setAttStudents(students);
     } catch { setAttSessions([]); setAttStudents([]); }
     finally { setAttLoading(false); }
-  }, [selectedClass, classEnrollments]);
+  }, [selectedClass, classEnrollments, selectedPeriod]);
 
   useEffect(() => {
     if (activeTab === "attendance" && selectedClass) {
@@ -175,12 +190,14 @@ export default function FacultyAttendancePage() {
     setShowCreateModal(true);
     setCreateSubjectId("");
     setCreateDate(today);
-  }, [today]);
+    setCreatePeriodId(selectedPeriod);
+  }, [today, selectedPeriod]);
 
-  const handleCreateSession = useCallback(() => {
+  const handleCreateSession = useCallback(async () => {
     if (!selectedClass || !createSubjectId) { setToast({ message: "Select a subject", type: "error" }); return; }
     if (classEnrollments.length === 0) { setToast({ message: "No students enrolled", type: "error" }); return; }
     if (!createDate) { setToast({ message: "Select a date", type: "error" }); return; }
+    if (!createPeriodId) { setToast({ message: "Academic period is required", type: "error" }); return; }
 
     const duplicate = attSessions.some(s => s.date === createDate && s.subject_id === createSubjectId);
     if (duplicate) {
@@ -188,18 +205,21 @@ export default function FacultyAttendancePage() {
       return;
     }
 
-    const subjectName = (selectedClass.subjects || []).find(s => s.id === createSubjectId)?.name || "Subject";
-    setAttSessions(prev => {
-      const next = [...prev, { date: createDate, subject_id: createSubjectId, subject_name: subjectName, statuses: {} as Record<string, AttendanceStatus> }];
-      next.sort((a, b) => {
-        const dateCmp = new Date(a.date).getTime() - new Date(b.date).getTime();
-        return dateCmp !== 0 ? dateCmp : a.subject_name.localeCompare(b.subject_name);
+    try {
+      await classApi.createAttendanceSession({
+        class_id: selectedClass.id,
+        subject_id: createSubjectId,
+        date: createDate,
+        period_id: Number(createPeriodId),
       });
-      return next;
-    });
-    setToast({ message: "Session added — mark attendance, then click Save Attendance", type: "success" });
-    setShowCreateModal(false);
-  }, [selectedClass, createSubjectId, createDate, classEnrollments, attSessions]);
+      setShowCreateModal(false);
+      setToast({ message: "Session created — mark attendance, then click Save Attendance", type: "success" });
+      await loadAttendanceSpreadsheet();
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to create attendance session";
+      setToast({ message: msg, type: "error" });
+    }
+  }, [selectedClass, createSubjectId, createDate, createPeriodId, classEnrollments, attSessions, loadAttendanceSpreadsheet]);
 
   const handleEditCell = useCallback((studentId: string, date: string, subjectId: string, value: string) => {
     if (value !== "0" && value !== "1" && value !== "") return;
@@ -278,7 +298,14 @@ export default function FacultyAttendancePage() {
     setSpreadLoading(true);
     try {
       const subjectFilter = histSubjectFilter || undefined;
-      const res = await attendanceApi.getHistory({ class_id: selectedClass.id, subject_id: subjectFilter, date_from: histDateFrom || undefined, date_to: histDateTo || undefined, limit: 200 });
+      const res = await attendanceApi.getHistory({
+        class_id: selectedClass.id,
+        subject_id: subjectFilter,
+        date_from: histDateFrom || undefined,
+        date_to: histDateTo || undefined,
+        limit: 200,
+        ...(selectedPeriod ? { period_id: Number(selectedPeriod) } : {}),
+      });
       const sessions: AttendanceHistoryItem[] = res.data.data?.data || [];
 
       const sessionMap = new Map<string, { date: string; subject_id: string; subject_name: string }>();
@@ -308,7 +335,7 @@ export default function FacultyAttendancePage() {
       setSpreadStudents(students);
     } catch { setSpreadSessions([]); setSpreadStudents([]); }
     finally { setSpreadLoading(false); }
-  }, [selectedClass, histSubjectFilter, histDateFrom, histDateTo, classEnrollments]);
+  }, [selectedClass, histSubjectFilter, histDateFrom, histDateTo, classEnrollments, selectedPeriod]);
 
   useEffect(() => {
     if (activeTab === "history" && selectedClass) openHistorySpreadsheet();
@@ -429,6 +456,14 @@ export default function FacultyAttendancePage() {
             </p>
           </div>
         </div>
+        {user?.school_id && currentSchoolYear && (
+          <PeriodSelector
+            schoolId={user.school_id}
+            schoolYearId={currentSchoolYear.id}
+            value={selectedPeriod}
+            onChange={setSelectedPeriod}
+          />
+        )}
       </div>
 
       {/* Tabs */}
@@ -902,11 +937,29 @@ export default function FacultyAttendancePage() {
                   <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Date</label>
                   <input type="date" className="mgmt-input" value={createDate} max={today} onChange={(e) => setCreateDate(e.target.value)} style={{ fontSize: "0.8rem" }} />
                 </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  {user?.school_id && currentSchoolYear ? (
+                    <PeriodSelector
+                      schoolId={user.school_id}
+                      schoolYearId={currentSchoolYear.id}
+                      value={createPeriodId}
+                      onChange={setCreatePeriodId}
+                      showAllOption={false}
+                    />
+                  ) : (
+                    <>
+                      <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)" }}>Academic Period</label>
+                      <select className="mgmt-input" disabled value="">
+                        <option>Loading...</option>
+                      </select>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <div style={{ padding: "1rem 1.5rem", borderTop: "1px solid var(--ml-border)", display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
               <button className="mgmt-btn mgmt-btn--ghost" onClick={() => setShowCreateModal(false)} style={{ fontSize: "0.8125rem" }}>Cancel</button>
-              <button className="mgmt-btn mgmt-btn--primary" onClick={handleCreateSession} disabled={!createSubjectId} style={{ fontSize: "0.8125rem" }}>
+              <button className="mgmt-btn mgmt-btn--primary" onClick={handleCreateSession} disabled={!createSubjectId || !createPeriodId} style={{ fontSize: "0.8125rem" }}>
                 Create Session
               </button>
             </div>
