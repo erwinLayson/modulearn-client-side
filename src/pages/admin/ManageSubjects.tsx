@@ -8,7 +8,6 @@ type ToastState = { message: string; type: "success" | "error" } | null;
 
 export default function ManageSubjectsAdmin() {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === "super_admin";
   const [subjects, setSubjects] = useState<SubjectListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -36,7 +35,7 @@ export default function ManageSubjectsAdmin() {
       <div className="mgmt-header">
         <div>
           <h1 className="mgmt-title">Subjects</h1>
-          <p className="mgmt-subtitle">{isSuperAdmin ? "View all subjects across all schools." : "View subjects."}</p>
+          <p className="mgmt-subtitle">View subjects.</p>
         </div>
       </div>
 

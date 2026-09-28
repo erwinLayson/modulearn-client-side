@@ -35,6 +35,39 @@
   border-radius: 0.75rem;
 }
 
+/* ---------- list filters ---------- */
+.mgmt-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--ml-shadow);
+}
+
+.mgmt-filters-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mgmt-filters-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mgmt-filters-count {
+  font-size: 0.75rem;
+  color: var(--ml-text-muted);
+}
+
 .mgmt-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -144,6 +177,19 @@
   transition: all 0.15s;
 }
 
+.mgmt-action.mgmt-action--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  line-height: 0;
+}
+
+/* Let the tooltip host detect hover on disabled icon buttons. */
+.mgmt-action--icon:disabled {
+  pointer-events: none;
+}
+
 .mgmt-action--edit {
   color: var(--ml-accent);
 }
@@ -158,5 +204,16 @@
 
 .mgmt-action--delete:hover {
   background: rgba(220, 38, 38, 0.08);
+}
+
+.mgmt-action:disabled {
+  color: var(--ml-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.mgmt-action--edit:disabled:hover,
+.mgmt-action--delete:disabled:hover {
+  background: none;
 }
 

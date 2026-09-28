@@ -3,6 +3,8 @@ import { useAuth } from "../../context/AuthContext";
 import { facultyApi, type FacultyRole } from "../../api/faculties";
 import type { FacultyListItem, FacultyPayload, FacultyUpdatePayload } from "../../api/faculties";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -155,8 +157,12 @@ export default function ManageFaculties() {
                   <td>{f.faculty_role ? f.faculty_role.charAt(0).toUpperCase() + f.faculty_role.slice(1) : "Teacher"}</td>
                   {canManage && (
                     <td className="mgmt-table-actions">
-                      <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(f)}>Edit</button>
-                      <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(f)}>Delete</button>
+                      <Tooltip label="Edit teacher">
+                        <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit teacher" onClick={() => openEdit(f)}><ActionIcon name="edit" /></button>
+                      </Tooltip>
+                      <Tooltip label="Delete teacher">
+                        <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete teacher" onClick={() => handleDelete(f)}><ActionIcon name="delete" /></button>
+                      </Tooltip>
                     </td>
                   )}
                 </tr>

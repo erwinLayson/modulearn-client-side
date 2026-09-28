@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { subjectApi, type SubjectListItem, type SubjectPayload, type SubjectFaculty } from "../../api/subjects";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
@@ -211,7 +213,9 @@ export default function ManageSubjects() {
                       <td className="dash-table-bold">{f.first_name} {f.last_name}</td>
                       <td>{f.email}</td>
                       <td style={{ textAlign: "right" }}>
-                        <button className="mgmt-action mgmt-action--delete" onClick={() => handleRemoveFaculty(f.id)}>Remove</button>
+                        <Tooltip label="Remove from subject">
+                          <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Remove from subject" onClick={() => handleRemoveFaculty(f.id)}><ActionIcon name="remove" /></button>
+                        </Tooltip>
                       </td>
                     </tr>
                   ))}
@@ -362,8 +366,12 @@ export default function ManageSubjects() {
               </div>
 
               <div className="mgmt-card-footer" onClick={(e) => e.stopPropagation()}>
-                <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(s)}>Edit</button>
-                <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(s)}>Delete</button>
+                <Tooltip label="Edit subject">
+                  <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit subject" onClick={() => openEdit(s)}><ActionIcon name="edit" /></button>
+                </Tooltip>
+                <Tooltip label="Delete subject">
+                  <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete subject" onClick={() => handleDelete(s)}><ActionIcon name="delete" /></button>
+                </Tooltip>
               </div>
             </div>
           ))}

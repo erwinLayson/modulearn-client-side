@@ -3,6 +3,8 @@ import { useAuth } from "../../context/AuthContext";
 import { moduleApi, type ModuleListItem, type ModulePayload } from "../../api/modules";
 import { subjectApi, type SubjectListItem } from "../../api/subjects";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -157,8 +159,12 @@ export default function ManageModules() {
                   <td className="mgmt-table-address mgmt-table-address--wrap">{m.description || "—"}</td>
                   {!isSuperAdmin && (
                     <td className="mgmt-table-actions">
-                      <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(m)}>Edit</button>
-                      <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(m)}>Delete</button>
+                      <Tooltip label="Edit module">
+                        <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit module" onClick={() => openEdit(m)}><ActionIcon name="edit" /></button>
+                      </Tooltip>
+                      <Tooltip label="Delete module">
+                        <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete module" onClick={() => handleDelete(m)}><ActionIcon name="delete" /></button>
+                      </Tooltip>
                     </td>
                   )}
                 </tr>
