@@ -1,10 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatures } from "../../context/FeaturesContext";
 import { classApi, type ClassListItem } from "../../api/classes";
 import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
-import { studentApi, type StudentListItem } from "../../api/students";
+import { studentApi, type StudentListItem, type AcademicRecordYear, type AcademicRecordSubject } from "../../api/students";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import { getApiErrorMessage } from "../../api/client";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -29,6 +34,18 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+function formatGrade(value: number | null): string {
+  if (value === null || value === undefined) return "—";
+  return Number(value).toFixed(2);
+}
+
+function averageGrade(subjects: AcademicRecordSubject[]): number | null {
+  const graded = subjects
+    .map(subj => subj.final_grade)
+    .filter((g): g is number => typeof g === "number");
+  return graded.length ? graded.reduce((a, b) => a + b, 0) / graded.length : null;
+}
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0]?.[0] ?? "";
@@ -44,7 +61,11 @@ function avatarClass(name: string): string {
 
 export default function ManageEnrollments() {
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
+  const navigate = useNavigate();
   const schoolId = user?.school_id ?? 0;
+  // The previous-years grades card reads the student academic record endpoint.
+  const canViewAcademicRecord = isEnabled("academic_record");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const dismissToast = useCallback(() => setToast(null), []);
@@ -65,6 +86,12 @@ export default function ManageEnrollments() {
 
   const [enrollments, setEnrollments] = useState<EnrollmentListItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Grades from every previous school year the selected student attended
+  const [prevYearRecords, setPrevYearRecords] = useState<AcademicRecordYear[]>([]);
+  const [prevYearLoading, setPrevYearLoading] = useState(false);
+  const [prevYearError, setPrevYearError] = useState<string | null>(null);
+  const [expandedPrevYears, setExpandedPrevYears] = useState<number[]>([]);
 
   // Search dropdown state
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
@@ -118,6 +145,41 @@ export default function ManageEnrollments() {
       .then(res => setEnrollments(res.data.data || []))
       .catch(() => setToast({ message: "Failed to load enrollments", type: "error" }));
   }, [selectedClass, selectedSYId]);
+
+  // Load every school year the student attended previously whenever the student
+  // or the school year being enrolled into changes.
+  const loadPreviousGrades = useCallback(async (studentId: string, excludeSchoolYearId: number) => {
+    setPrevYearLoading(true);
+    setPrevYearError(null);
+    try {
+      const res = await studentApi.getAcademicRecord(studentId, "all");
+      const records = res.data.data?.records ?? [];
+      const previous = records
+        .filter((r) => r.school_year.id !== excludeSchoolYearId)
+        .sort((a, b) =>
+          (b.school_year.start_date ?? "").localeCompare(a.school_year.start_date ?? "") ||
+          b.school_year.id - a.school_year.id
+        );
+      setPrevYearRecords(previous);
+      // Open the most recent year by default; older years stay collapsed.
+      setExpandedPrevYears(previous.length > 0 ? [previous[0].school_year.id] : []);
+    } catch (err: unknown) {
+      setPrevYearRecords([]);
+      setPrevYearError(getApiErrorMessage(err, "Failed to load the student's previous grades"));
+    } finally {
+      setPrevYearLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedStudent || !canViewAcademicRecord) {
+      setPrevYearRecords([]);
+      setExpandedPrevYears([]);
+      setPrevYearError(null);
+      return;
+    }
+    loadPreviousGrades(selectedStudent.id, selectedSYId);
+  }, [selectedStudent, selectedSYId, canViewAcademicRecord, loadPreviousGrades]);
 
   // Load subjects when class changes
   useEffect(() => {
@@ -269,6 +331,11 @@ export default function ManageEnrollments() {
   const isAtCapacity = !!selectedClass?.capacity && activeCount >= selectedClass.capacity;
   const canEnroll = step1Done && !!selectedStudent && selectedGradeLevel !== null && !!selectedClass && !isAtCapacity && selectedSubjectIds.length > 0;
   const selectedSY = schoolYears.find(s => s.id === selectedSYId);
+  const togglePrevYear = (schoolYearId: number) => {
+    setExpandedPrevYears(prev =>
+      prev.includes(schoolYearId) ? prev.filter(id => id !== schoolYearId) : [...prev, schoolYearId]
+    );
+  };
   const capPercent = selectedClass?.capacity ? Math.min(100, Math.round((activeCount / selectedClass.capacity) * 100)) : 0;
 
   // Hints for the summary sidebar
@@ -413,6 +480,132 @@ export default function ManageEnrollments() {
                           <span className="enroll-chip-name">{selectedStudent.first_name} {selectedStudent.last_name}</span>
                           <span className="enroll-chip-meta">{selectedStudent.email}</span>
                           <button className="enroll-chip-remove" onClick={clearStudent} aria-label="Remove student">✕</button>
+                        </div>
+                      )}
+
+                      {/* Grades from every school year the student attended previously */}
+                      {selectedStudent && canViewAcademicRecord && (
+                        <div className="enroll-prev">
+                          <div className="enroll-prev-head">
+                            <div>
+                              <h3 className="enroll-prev-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                                  <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                                </svg>
+                                Previous school years
+                              </h3>
+                              <p className="enroll-prev-sub">
+                                {prevYearRecords.length > 0
+                                  ? `${prevYearRecords.length} school year${prevYearRecords.length > 1 ? "s" : ""} on record${selectedSY ? `, excluding ${selectedSY.name}` : ""}.`
+                                  : "Grades from every school year the student attended, excluding the year being enrolled into."}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="enroll-mini-btn"
+                              onClick={() => navigate(`/dashboard/students/${selectedStudent.id}/academic-record`)}
+                            >
+                              Full academic record
+                            </button>
+                          </div>
+
+                          {prevYearLoading ? (
+                            <div className="enroll-prev-state">Loading previous grades…</div>
+                          ) : prevYearError ? (
+                            <div className="enroll-prev-state enroll-prev-state--error">
+                              <span>{prevYearError}</span>
+                              <button
+                                type="button"
+                                className="enroll-mini-btn"
+                                onClick={() => loadPreviousGrades(selectedStudent.id, selectedSYId)}
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          ) : prevYearRecords.length === 0 ? (
+                            <div className="enroll-prev-state">
+                              No grades found for a previous school year — this looks like a new student.
+                            </div>
+                          ) : (
+                            prevYearRecords.map(record => {
+                              const isOpen = expandedPrevYears.includes(record.school_year.id);
+                              const avg = averageGrade(record.subjects);
+                              return (
+                                <div key={record.school_year.id} className="enroll-prev-year">
+                                  <button
+                                    type="button"
+                                    className="enroll-prev-year-head"
+                                    aria-expanded={isOpen}
+                                    onClick={() => togglePrevYear(record.school_year.id)}
+                                  >
+                                    <svg
+                                      className={`enroll-prev-chevron ${isOpen ? "enroll-prev-chevron--open" : ""}`}
+                                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                                    >
+                                      <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                    <span className="enroll-prev-year-text">
+                                      <span className="enroll-prev-year-name">{record.school_year.name}</span>
+                                      <span className="enroll-prev-year-meta">
+                                        {[
+                                          record.enrollment.grade_level ? `Grade ${record.enrollment.grade_level}` : null,
+                                          record.enrollment.section ? `Section ${record.enrollment.section}` : null,
+                                          record.enrollment.class_name,
+                                          record.enrollment.adviser_name ? `Adviser: ${record.enrollment.adviser_name}` : null,
+                                          record.enrollment.status,
+                                        ].filter(Boolean).join(" · ")}
+                                      </span>
+                                    </span>
+                                    <span className="enroll-prev-year-avg">
+                                      {avg !== null ? `Average ${formatGrade(avg)}` : "No grades"}
+                                    </span>
+                                  </button>
+
+                                  {isOpen && (
+                                    record.subjects.length === 0 ? (
+                                      <div className="enroll-prev-state">
+                                        No subject grades were recorded for {record.school_year.name}.
+                                      </div>
+                                    ) : (
+                                      <div className="mgmt-table-wrap enroll-prev-table">
+                                        <table className="mgmt-table mgmt-table--compact">
+                                          <thead>
+                                            <tr>
+                                              <th>Subject</th>
+                                              {record.periods.map(p => <th key={p.id}>{p.name}</th>)}
+                                              <th>Final Grade</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {record.subjects.map(subj => (
+                                              <tr key={subj.subject_id}>
+                                                <td className="mgmt-table-bold">{subj.subject_name}</td>
+                                                {record.periods.map(p => {
+                                                  const grade = subj.grades.find(g => g.period_id === p.id);
+                                                  return <td key={p.id}>{formatGrade(grade ? grade.final_grade : null)}</td>;
+                                                })}
+                                                <td className="mgmt-table-bold">{formatGrade(subj.final_grade)}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                          {avg !== null && (
+                                            <tfoot>
+                                              <tr>
+                                                <td className="mgmt-table-bold">General Average</td>
+                                                {record.periods.map(p => <td key={p.id} />)}
+                                                <td className="mgmt-table-bold">{formatGrade(avg)}</td>
+                                              </tr>
+                                            </tfoot>
+                                          )}
+                                        </table>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       )}
                     </>
@@ -616,7 +809,9 @@ export default function ManageEnrollments() {
                                 </td>
                                 <td>{new Date(e.enrolled_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</td>
                                 <td className="mgmt-table-actions">
-                                  <button className="mgmt-action mgmt-action--delete" onClick={() => handleRemove(e.id)}>Remove</button>
+                                  <Tooltip label="Remove from class">
+                                    <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Remove from class" onClick={() => handleRemove(e.id)}><ActionIcon name="remove" /></button>
+                                  </Tooltip>
                                 </td>
                               </tr>
                             ))}
