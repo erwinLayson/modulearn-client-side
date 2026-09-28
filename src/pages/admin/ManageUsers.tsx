@@ -1,10 +1,25 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { userApi, type UserRole, type UserUpdatePayload } from "../../api/users";
 import type { UserListItem } from "../../api/users";
+import { schoolApi, type SchoolListItem } from "../../api/schools";
+import { getApiErrorMessage } from "../../api/client";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
+type RoleFilter = UserRole | "all";
+
+const MIN_PASSWORD_LENGTH = 6;
+
+const ROLE_FILTER_OPTIONS: { value: RoleFilter; label: string }[] = [
+  { value: "all", label: "All roles" },
+  { value: "super_admin", label: "Super Admin" },
+  { value: "school_admin", label: "School Admin" },
+  { value: "faculty", label: "Faculty" },
+  { value: "student", label: "Student" },
+];
 
 export default function ManageUsers() {
   const { user } = useAuth();
@@ -13,6 +28,12 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const dismissToast = useCallback(() => setToast(null), []);
+
+  // list filters
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [schoolFilter, setSchoolFilter] = useState<string>("all");
+  const [schools, setSchools] = useState<SchoolListItem[]>([]);
 
   // modal state
   const [showCreate, setShowCreate] = useState(false);
@@ -29,6 +50,12 @@ export default function ManageUsers() {
   const [editForm, setEditForm] = useState<UserUpdatePayload>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // password modal state
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordTarget, setPasswordTarget] = useState<UserListItem | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ new_password: "", confirm_password: "" });
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
   const fetchUsers = useCallback(async () => {
     try {
       const { data } = await userApi.getAll();
@@ -40,7 +67,58 @@ export default function ManageUsers() {
     }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  // School names are cosmetic (used only for the filter labels); fall back to IDs.
+  const fetchSchools = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    try {
+      const { data } = await schoolApi.getAll();
+      setSchools(data.data || []);
+    } catch {
+      // ignore — options fall back to "School #<id>"
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => { fetchUsers(); fetchSchools(); }, [fetchUsers, fetchSchools]);
+
+  const schoolNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    schools.forEach((s) => map.set(Number(s.school_id), s.school_name));
+    return map;
+  }, [schools]);
+
+  const schoolOptions = useMemo(() => {
+    const ids = Array.from(
+      new Set(users.map((u) => u.school_id).filter((id): id is number => id != null))
+    ).sort((a, b) => a - b);
+    return ids.map((id) => ({ value: String(id), label: schoolNameById.get(id) ?? `School #${id}` }));
+  }, [users, schoolNameById]);
+
+  const hasUnassignedSchool = useMemo(() => users.some((u) => u.school_id == null), [users]);
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return users.filter((u) => {
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (schoolFilter === "none") {
+        if (u.school_id != null) return false;
+      } else if (schoolFilter !== "all" && String(u.school_id ?? "") !== schoolFilter) {
+        return false;
+      }
+      if (!query) return true;
+      return (
+        (u.name ?? "").toLowerCase().includes(query) ||
+        u.email.toLowerCase().includes(query) ||
+        String(u.school_id ?? "").includes(query)
+      );
+    });
+  }, [users, search, roleFilter, schoolFilter]);
+
+  const filtersActive = search.trim() !== "" || roleFilter !== "all" || schoolFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setRoleFilter("all");
+    setSchoolFilter("all");
+  };
 
   // ---------- CREATE ----------
   const handleCreate = async (e: React.FormEvent) => {
@@ -95,6 +173,49 @@ export default function ManageUsers() {
     }
   };
 
+  // ---------- PASSWORD ----------
+  const openPassword = (u: UserListItem) => {
+    setPasswordTarget(u);
+    setPasswordForm({ new_password: "", confirm_password: "" });
+    setShowPassword(true);
+  };
+
+  const closePassword = () => {
+    setShowPassword(false);
+    setPasswordTarget(null);
+    setPasswordForm({ new_password: "", confirm_password: "" });
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordTarget) return;
+    const { new_password, confirm_password } = passwordForm;
+
+    if (!new_password) {
+      setToast({ message: "New password is required", type: "error" });
+      return;
+    }
+    if (new_password !== confirm_password) {
+      setToast({ message: "New passwords do not match", type: "error" });
+      return;
+    }
+    if (new_password.length < MIN_PASSWORD_LENGTH) {
+      setToast({ message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters`, type: "error" });
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      await userApi.updatePassword(passwordTarget.id, { new_password });
+      setToast({ message: `Password updated for ${passwordTarget.email}`, type: "success" });
+      closePassword();
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to update password"), type: "error" });
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
+
   // ---------- DELETE ----------
   const handleDelete = async (u: UserListItem) => {
     if (!confirm(`Delete ${u.name || u.email}?`)) return;
@@ -130,37 +251,113 @@ export default function ManageUsers() {
       ) : users.length === 0 ? (
         <div className="mgmt-empty">No users yet.{isSuperAdmin ? " Add one to get started." : ""}</div>
       ) : (
-        <div className="mgmt-table-wrap">
-          <table className="mgmt-table mgmt-table--compact">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>School ID</th>
-                {isSuperAdmin && <th className="mgmt-table-actions">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td className="mgmt-table-bold">{u.name || "-"}</td>
-                  <td>{u.email}</td>
-                  <td><span className="dash-badge dash-badge--active">{u.role}</span></td>
-                  <td><span className={`dash-badge ${u.status === "active" ? "dash-badge--active" : u.status === "inactive" ? "dash-badge--completed" : "dash-badge--dropped"}`}>{u.status}</span></td>
-                  <td>{u.school_id ?? "-"}</td>
-                  {isSuperAdmin && (
-                    <td className="mgmt-table-actions">
-                      <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(u)}>Edit</button>
-                      <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(u)}>Delete</button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="mgmt-filters">
+            <div className="mgmt-filters-field">
+              <label className="mgmt-label" htmlFor="user-search">Search</label>
+              <input
+                id="user-search"
+                className="mgmt-input"
+                placeholder="Name, email or school ID…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="mgmt-filters-field">
+              <label className="mgmt-label" htmlFor="user-role">Role</label>
+              <select
+                id="user-role"
+                className="mgmt-input mgmt-select"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
+              >
+                {ROLE_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mgmt-filters-field">
+              <label className="mgmt-label" htmlFor="user-school">School</label>
+              <select
+                id="user-school"
+                className="mgmt-input mgmt-select"
+                value={schoolFilter}
+                onChange={(e) => setSchoolFilter(e.target.value)}
+              >
+                <option value="all">All schools</option>
+                {schoolOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+                {hasUnassignedSchool && <option value="none">No school</option>}
+              </select>
+            </div>
+            <div className="mgmt-filters-foot">
+              <span className="mgmt-filters-count">
+                Showing {filteredUsers.length} of {users.length} user{users.length === 1 ? "" : "s"}
+              </span>
+              {filtersActive && (
+                <button className="mgmt-btn mgmt-btn--ghost" onClick={clearFilters}>Clear filters</button>
+              )}
+            </div>
+          </div>
+
+          {filteredUsers.length === 0 ? (
+            <div className="mgmt-empty">
+              No users match the current filters.
+              <div style={{ marginTop: "0.75rem" }}>
+                <button className="mgmt-btn mgmt-btn--ghost" onClick={clearFilters}>Clear filters</button>
+              </div>
+            </div>
+          ) : (
+            <div className="mgmt-table-wrap">
+              <table className="mgmt-table mgmt-table--compact">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>School ID</th>
+                    {isSuperAdmin && <th className="mgmt-table-actions">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((u) => (
+                    <tr key={u.id}>
+                      <td className="mgmt-table-bold">{u.name || "-"}</td>
+                      <td>{u.email}</td>
+                      <td><span className="dash-badge dash-badge--active">{u.role}</span></td>
+                      <td><span className={`dash-badge ${u.status === "active" ? "dash-badge--active" : u.status === "inactive" ? "dash-badge--completed" : "dash-badge--dropped"}`}>{u.status}</span></td>
+                      <td>{u.school_id ?? "-"}</td>
+                      {isSuperAdmin && (
+                        <td className="mgmt-table-actions">
+                          <Tooltip label="Edit user">
+                            <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit user" onClick={() => openEdit(u)}><ActionIcon name="edit" /></button>
+                          </Tooltip>
+                          <Tooltip
+                            label={u.id === user.id ? "Change your own password in Settings" : "Set a new password"}
+                          >
+                            <button
+                              className="mgmt-action mgmt-action--edit mgmt-action--icon"
+                              onClick={() => openPassword(u)}
+                              disabled={u.id === user.id}
+                              aria-label={u.id === user.id ? "Change your own password in Settings" : "Set a new password"}
+                            >
+                              <ActionIcon name="password" />
+                            </button>
+                          </Tooltip>
+                          <Tooltip label="Delete user">
+                            <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete user" onClick={() => handleDelete(u)}><ActionIcon name="delete" /></button>
+                          </Tooltip>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
 
       {/* CREATE MODAL */}
@@ -273,6 +470,56 @@ export default function ManageUsers() {
               <div className="mgmt-modal-actions">
                 <button type="button" className="mgmt-btn mgmt-btn--ghost" onClick={() => setShowEdit(false)}>Cancel</button>
                 <button type="submit" className="mgmt-btn mgmt-btn--primary" disabled={submitting}>{submitting ? "Saving..." : "Save"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SET PASSWORD MODAL */}
+      {showPassword && passwordTarget && isSuperAdmin && (
+        <div className="mgmt-modal-overlay" onClick={closePassword}>
+          <div className="mgmt-modal" style={{ maxWidth: "500px", maxHeight: "90vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mgmt-modal-header">
+              <h2 className="mgmt-modal-title">Set Password</h2>
+              <button className="mgmt-modal-close" onClick={closePassword} aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="mgmt-form">
+              <fieldset className="mgmt-fieldset">
+                <legend>New Credentials</legend>
+                <p className="mgmt-subtitle">Set a new password for {passwordTarget.name || passwordTarget.email}.</p>
+                <div className="mgmt-form-grid">
+                  <div className="mgmt-form-row">
+                    <label className="mgmt-label">New Password *</label>
+                    <input
+                      className="mgmt-input"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      value={passwordForm.new_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                    />
+                  </div>
+                  <div className="mgmt-form-row">
+                    <label className="mgmt-label">Confirm New Password *</label>
+                    <input
+                      className="mgmt-input"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      value={passwordForm.confirm_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </fieldset>
+              <div className="mgmt-modal-actions">
+                <button type="button" className="mgmt-btn mgmt-btn--ghost" onClick={closePassword}>Cancel</button>
+                <button type="submit" className="mgmt-btn mgmt-btn--primary" disabled={passwordSubmitting}>{passwordSubmitting ? "Saving..." : "Update Password"}</button>
               </div>
             </form>
           </div>

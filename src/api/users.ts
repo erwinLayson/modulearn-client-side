@@ -29,6 +29,10 @@ export interface UserUpdatePayload {
   name?: string;
 }
 
+export interface UserPasswordPayload {
+  new_password: string;
+}
+
 export const userApi = {
   getAll: () =>
     apiClient.get<{ data: UserListItem[] }>("/users"),
@@ -41,6 +45,9 @@ export const userApi = {
 
   update: (id: string, payload: UserUpdatePayload) =>
     apiClient.put<{ message: string; isOk: boolean }>(`/users/${id}`, payload),
+
+  updatePassword: (id: string, payload: UserPasswordPayload) =>
+    apiClient.put<{ message: string; isOk: boolean }>(`/users/${id}/password`, payload),
 
   delete: (id: string) =>
     apiClient.delete<{ message: string; isOk: boolean }>(`/users/${id}`),
