@@ -9,6 +9,7 @@ import MasterLayout from "./components/MasterLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ManageFaculties from "./pages/school_admin/ManageFaculties";
 import ManageStudents from "./pages/school_admin/ManageStudents";
+import StudentAcademicRecordPage from "./pages/school_admin/StudentAcademicRecordPage";
 import ManageClasses from "./pages/school_admin/ManageClasses";
 import ManageEnrollments from "./pages/school_admin/ManageEnrollments";
 import ManageUsers from "./pages/admin/ManageUsers";
@@ -80,6 +81,12 @@ export default function App() {
               <Route path="users" element={<ManageUsers />} />
               <Route path="faculties" element={<ManageFaculties />} />
               <Route path="students" element={<ManageStudents />} />
+              <Route
+                path="students/:studentId/academic-record"
+                element={<ProtectedRoute allowedRoles={["school_admin"]} />}
+              >
+                <Route index element={<StudentAcademicRecordPage />} />
+              </Route>
               <Route path="classes" element={<ClassesRoute />} />
               <Route path="enrollments" element={<ManageEnrollments />} />
               <Route path="modules" element={<ManageModules />} />

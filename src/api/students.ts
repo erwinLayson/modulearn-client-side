@@ -92,12 +92,63 @@ export interface ImportPreview {
   }>;
 }
 
+export interface AcademicRecordSubject {
+  subject_id: string;
+  subject_name: string;
+  grades: Array<{ period_id: number; final_grade: number | null }>;
+  final_grade: number | null;
+}
+
+export interface AcademicRecordYear {
+  school_year: { id: number; name: string; start_date: string; end_date: string; is_current: number };
+  enrollment: {
+    grade_level: string | number | null;
+    section: string | null;
+    class_name: string;
+    adviser_name: string | null;
+    status: string;
+  };
+  periods: Array<{ id: number; name: string; period_number: number; start_date: string; end_date: string }>;
+  subjects: AcademicRecordSubject[];
+}
+
+export interface AcademicRecordResponse {
+  student: {
+    id: string;
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    extension_name: string;
+    lrn: string;
+    email: string;
+    sex: string;
+    date_of_birth: string | null;
+  };
+  school: {
+    school_id: number;
+    school_name: string;
+    address: string;
+    region: string;
+    province: string;
+    city: string;
+    contact_number: string;
+    school_logo: string;
+  };
+  records: AcademicRecordYear[];
+}
+
 export const studentApi = {
   getAll: (schoolId: number) =>
     apiClient.get<{ data: StudentListItem[] }>(`/students/school/${schoolId}`),
 
   getById: (id: string) =>
     apiClient.get<{ data: StudentListItem }>(`/students/${id}`),
+
+  getAcademicRecord: (id: string, scope: "all" | "current") =>
+    apiClient.get<{ message: string; isOk: boolean; data: AcademicRecordResponse }>(
+      `/students/${id}/academic-record`,
+      { params: { scope } }
+    ),
 
   create: (payload: StudentPayload) =>
     apiClient.post<{ message: string; isOk: boolean }>("/students", payload),

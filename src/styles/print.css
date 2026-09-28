@@ -1,0 +1,209 @@
+/* Print styles for Student Academic Record */
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+.ar-page {
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.ar-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ar-scope-toggle {
+  display: inline-flex;
+  border: 1px solid var(--ml-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.ar-scope-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--ml-surface);
+  color: var(--ml-text-secondary);
+  border: none;
+  cursor: pointer;
+}
+
+.ar-scope-btn--active {
+  background: var(--ml-primary, #2563eb);
+  color: #fff;
+}
+
+.ar-sheet {
+  background: #fff;
+  color: #111;
+  border: 1px solid var(--ml-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--ml-shadow);
+  padding: 2rem;
+}
+
+.ar-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 2px solid #111;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.ar-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.ar-school-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.ar-school-meta {
+  font-size: 0.8125rem;
+  color: #444;
+}
+
+.ar-doc-title {
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+}
+
+.ar-student-block {
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.ar-student-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+.ar-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.ar-year-section {
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+}
+
+.ar-year-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ar-year-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ar-year-meta {
+  font-size: 0.8125rem;
+  color: #444;
+  margin-top: 0.15rem;
+}
+
+.ar-table-wrap {
+  border-radius: 0.5rem;
+}
+
+.ar-table {
+  min-width: 480px;
+}
+
+.ar-table th,
+.ar-table td {
+  border: 1px solid #ddd !important;
+  padding: 0.45rem 0.6rem !important;
+}
+
+.ar-table th {
+  background: #f3f4f6 !important;
+  color: #111 !important;
+  font-weight: 700 !important;
+}
+
+.ar-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #ccc;
+  font-size: 0.75rem;
+  color: #555;
+}
+
+@media print {
+  .no-print,
+  .master-topbar,
+  .sidebar-overlay,
+  .master-layout > .sidebar,
+  aside.sidebar,
+  nav.sidebar {
+    display: none !important;
+  }
+
+  .master-layout,
+  .master-content,
+  .master-main {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .ar-page {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ar-sheet {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .mgmt-table thead {
+    display: table-header-group;
+  }
+
+  .mgmt-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .ar-year-section {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}

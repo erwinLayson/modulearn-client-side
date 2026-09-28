@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { studentApi } from "../../api/students";
 import type { StudentListItem, StudentPayload, StudentUpdatePayload, ImportResult, ImportPreview } from "../../api/students";
@@ -29,6 +30,7 @@ const emptyCreate: StudentPayload = {
 
 export default function ManageStudents() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const canManage = user?.role === "school_admin";
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -335,6 +337,7 @@ export default function ManageStudents() {
                   </td>
                   {canManage && (
                     <td className="mgmt-table-actions">
+                      <button className="mgmt-action mgmt-action--edit" onClick={() => navigate(`/dashboard/students/${s.id}/academic-record`)}>Record</button>
                       <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(s)}>Edit</button>
                       <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(s)}>Delete</button>
                     </td>
