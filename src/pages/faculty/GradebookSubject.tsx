@@ -587,7 +587,7 @@ export default function GradebookSubject() {
               {/* Category group header row */}
               <thead>
                 <tr>
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sticky">
+                  <th  className="gb-spreadsheet__th gb-spreadsheet__th--sticky">
                     <div className="gb-spreadsheet__student-header">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -616,13 +616,13 @@ export default function GradebookSubject() {
                       TOTAL
                     </th>
                   )}
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--attendance-header">
+                  <th rowSpan={2} className="gb-spreadsheet__th gb-spreadsheet__th--attendance-header">
                     ATTENDANCE
                   </th>
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--final-header">
+                  <th rowSpan={2} className="gb-spreadsheet__th gb-spreadsheet__th--final-header">
                     FINAL GRADE
                   </th>
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--remarks-header">
+                  <th rowSpan={2} className="gb-spreadsheet__th gb-spreadsheet__th--remarks-header">
                     REMARKS
                   </th>
                 </tr>
@@ -657,15 +657,7 @@ export default function GradebookSubject() {
                       Earned/Possible
                     </th>
                   )}
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--attendance-header">
-                    Subject Rate
-                  </th>
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--final-header">
-                    Score
-                  </th>
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--remarks-header">
-                    Status
-                  </th>
+                  
                 </tr>
               </thead>
 

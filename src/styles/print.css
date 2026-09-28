@@ -39,6 +39,17 @@
   color: #fff;
 }
 
+/* Batch printing: many report cards rendered back to back. */
+.ar-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ar-batch-item {
+  break-inside: avoid;
+}
+
 .ar-sheet {
   background: #fff;
   color: #111;
@@ -201,6 +212,23 @@
   .ar-year-section {
     break-inside: avoid-page;
     page-break-inside: avoid;
+  }
+
+  /* One advisor batch print out: each report card starts on a fresh page. */
+  .ar-batch {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  .ar-batch-item {
+    break-after: page;
+    page-break-after: always;
+    break-inside: auto;
+  }
+
+  .ar-batch-item:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   body {

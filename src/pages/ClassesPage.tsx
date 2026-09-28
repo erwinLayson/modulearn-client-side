@@ -1,8 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useFeatures } from "../context/FeaturesContext";
 import { classApi, type ClassListItem, type ScheduleItem, type FacultyClassAssignment } from "../api/classes";
 import { enrollmentApi, type EnrollmentListItem } from "../api/enrollments";
 import { schoolYearApi } from "../api/school-years";
+import ActionIcon from "../components/ActionIcon";
+import Tooltip from "../components/Tooltip";
 import Toast from "../components/Toast";
 import { COLORS } from "../constant/colors";
 
@@ -32,9 +36,12 @@ interface StudentClassDetail {
 
 export default function ClassesPage({ role }: ClassesPageProps) {
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
+  const navigate = useNavigate();
   const isSchoolAdmin = role === "school_admin";
   const isFaculty = role === "faculty";
   const isStudent = role === "student";
+  const canViewAcademicRecord = isEnabled("academic_record");
 
   const [classes, setClasses] = useState<ClassListItem[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<FacultyClassAssignment[]>([]);
@@ -139,6 +146,9 @@ export default function ClassesPage({ role }: ClassesPageProps) {
     setClassEnrollments([]);
   }, []);
 
+  // Faculty can print report cards only for students of their own advisory class.
+  const showRecordActions = isFaculty && canViewAcademicRecord && !!user && selectedClass?.faculty_id === user.id;
+
   const formatSchedule = (schedule: ClassListItem["schedule"]) => {
     if (!Array.isArray(schedule) || schedule.length === 0) return "\u2014";
     return schedule.map((s: { day: string; start_time: string; end_time: string; room?: string }) =>
@@ -201,6 +211,17 @@ export default function ClassesPage({ role }: ClassesPageProps) {
                 </p>
               </div>
             </div>
+            {showRecordActions && (
+              <Tooltip label="Print every advisee's report card in one document">
+                <button
+                  className="mgmt-action mgmt-action--edit"
+                  onClick={() => navigate(`/dashboard/classes/${selectedClass.id}/report-cards`)}
+                  type="button"
+                >
+                  Print all report cards
+                </button>
+              </Tooltip>
+            )}
           </div>
 
           <div className="mgmt-detail-info" style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--ml-border)" }}>
@@ -240,7 +261,7 @@ export default function ClassesPage({ role }: ClassesPageProps) {
             ) : (
               <div className="mgmt-table-wrap">
                 <table className="mgmt-table mgmt-table--compact">
-                  <thead><tr><th>Student Name</th><th>Email</th><th>Status</th><th>Enrolled</th></tr></thead>
+                  <thead><tr><th>Student Name</th><th>Email</th><th>Status</th><th>Enrolled</th>{showRecordActions && <th className="mgmt-table-actions">Report Card</th>}</tr></thead>
                   <tbody>
                     {classEnrollments.map(e => (
                       <tr key={e.id}>
@@ -248,6 +269,19 @@ export default function ClassesPage({ role }: ClassesPageProps) {
                         <td>{e.student_email}</td>
                         <td><span className={`dash-badge dash-badge--${e.status}`}>{e.status.charAt(0).toUpperCase() + e.status.slice(1)}</span></td>
                         <td>{new Date(e.enrolled_at).toLocaleDateString()}</td>
+                        {showRecordActions && (
+                          <td className="mgmt-table-actions">
+                            <Tooltip label="Print report card">
+                              <button
+                                className="mgmt-action mgmt-action--edit mgmt-action--icon"
+                                aria-label="Print report card"
+                                onClick={() => navigate(`/dashboard/students/${e.student_id}/academic-record`)}
+                              >
+                                <ActionIcon name="record" />
+                              </button>
+                            </Tooltip>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
