@@ -1,12 +1,16 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatures } from "../../context/FeaturesContext";
 import { studentApi } from "../../api/students";
 import type { StudentListItem, StudentPayload, StudentUpdatePayload, ImportResult, ImportPreview } from "../../api/students";
 
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
+type SexFilter = "all" | "male" | "female";
 
 const emptyCreate: StudentPayload = {
   first_name: "",
@@ -30,8 +34,10 @@ const emptyCreate: StudentPayload = {
 
 export default function ManageStudents() {
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
   const navigate = useNavigate();
   const canManage = user?.role === "school_admin";
+  const canViewAcademicRecord = isEnabled("academic_record");
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -42,6 +48,10 @@ export default function ManageStudents() {
   const [showEdit, setShowEdit] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<StudentListItem | null>(null);
+
+  // list filters
+  const [search, setSearch] = useState("");
+  const [sexFilter, setSexFilter] = useState<SexFilter>("all");
   const [createForm, setCreateForm] = useState(emptyCreate);
   const [editForm, setEditForm] = useState<StudentUpdatePayload>({});
   const [submitting, setSubmitting] = useState(false);
@@ -278,6 +288,31 @@ export default function ManageStudents() {
     URL.revokeObjectURL(url);
   };
 
+  const clearFilters = () => {
+    setSearch("");
+    setSexFilter("all");
+  };
+
+  const filteredStudents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return students.filter((s) => {
+      if (sexFilter !== "all" && s.sex !== sexFilter) return false;
+      if (!query) return true;
+      const name = [s.first_name, s.middle_name, s.last_name, s.extension_name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return (
+        name.includes(query) ||
+        (s.email ?? "").toLowerCase().includes(query) ||
+        (s.lrn ?? "").toLowerCase().includes(query) ||
+        (s.contact_number ?? "").toLowerCase().includes(query)
+      );
+    });
+  }, [students, search, sexFilter]);
+
+  const filtersActive = search.trim() !== "" || sexFilter !== "all";
+
   if (!user) return null;
 
   return (
@@ -309,44 +344,97 @@ export default function ManageStudents() {
       ) : students.length === 0 ? (
         <div className="mgmt-empty">No students yet.{canManage ? " Add one to get started." : ""}</div>
       ) : (
-        <div className="mgmt-table-wrap">
-          <table className="mgmt-table mgmt-table--compact">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Email</th>
-                <th>Sex</th>
-                <th>Contact</th>
-                <th>LRN</th>
-                <th>Address</th>
-                {canManage && <th className="mgmt-table-actions">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s) => (
-                <tr key={s.id}>
-                  <td className="mgmt-table-bold">{s.first_name} {s.middle_name && s.middle_name + ' '}{s.last_name}{s.extension_name && ' ' + s.extension_name}</td>
-                  <td>{s.age ?? 'N/A'}</td>
-                  <td>{s.email}</td>
-                  <td>{s.sex}</td>
-                  <td>{s.contact_number || '-'}</td>
-                  <td>{s.lrn || '-'}</td>
-                  <td className="mgmt-table-address mgmt-table-address--wrap">
-                    {s.purok_street}, {s.barangay}, {s.city_municipality}, {s.province}, {s.region}
-                  </td>
-                  {canManage && (
-                    <td className="mgmt-table-actions">
-                      <button className="mgmt-action mgmt-action--edit" onClick={() => navigate(`/dashboard/students/${s.id}/academic-record`)}>Record</button>
-                      <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(s)}>Edit</button>
-                      <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(s)}>Delete</button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="mgmt-filters">
+            <div className="mgmt-filters-field">
+              <label className="mgmt-label" htmlFor="student-search">Search</label>
+              <input
+                id="student-search"
+                className="mgmt-input"
+                placeholder="Name, LRN, email or contact…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="mgmt-filters-field">
+              <label className="mgmt-label" htmlFor="student-sex">Sex</label>
+              <select
+                id="student-sex"
+                className="mgmt-input mgmt-select"
+                value={sexFilter}
+                onChange={(e) => setSexFilter(e.target.value as SexFilter)}
+              >
+                <option value="all">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <div className="mgmt-filters-foot">
+              <span className="mgmt-filters-count">
+                Showing {filteredStudents.length} of {students.length} student{students.length === 1 ? "" : "s"}
+              </span>
+              {filtersActive && (
+                <button className="mgmt-btn mgmt-btn--ghost" onClick={clearFilters}>Clear filters</button>
+              )}
+            </div>
+          </div>
+
+          {filteredStudents.length === 0 ? (
+            <div className="mgmt-empty">
+              No students match the current filters.
+              <div style={{ marginTop: "0.75rem" }}>
+                <button className="mgmt-btn mgmt-btn--ghost" onClick={clearFilters}>Clear filters</button>
+              </div>
+            </div>
+          ) : (
+            <div className="mgmt-table-wrap">
+              <table className="mgmt-table mgmt-table--compact">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Email</th>
+                    <th>Sex</th>
+                    <th>Contact</th>
+                    <th>LRN</th>
+                    <th>Address</th>
+                    {canManage && <th className="mgmt-table-actions">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStudents.map((s) => (
+                    <tr key={s.id}>
+                      <td className="mgmt-table-bold">{s.first_name} {s.middle_name && s.middle_name + ' '}{s.last_name}{s.extension_name && ' ' + s.extension_name}</td>
+                      <td>{s.age ?? 'N/A'}</td>
+                      <td>{s.email}</td>
+                      <td>{s.sex}</td>
+                      <td>{s.contact_number || '-'}</td>
+                      <td>{s.lrn || '-'}</td>
+                      <td className="mgmt-table-address mgmt-table-address--wrap">
+                        {s.purok_street}, {s.barangay}, {s.city_municipality}, {s.province}, {s.region}
+                      </td>
+                      {canManage && (
+                        <td className="mgmt-table-actions">
+                          {canViewAcademicRecord && (
+                            <Tooltip label="Academic record">
+                              <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Academic record" onClick={() => navigate(`/dashboard/students/${s.id}/academic-record`)}><ActionIcon name="record" /></button>
+                            </Tooltip>
+                          )}
+                          <Tooltip label="Edit student">
+                            <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit student" onClick={() => openEdit(s)}><ActionIcon name="edit" /></button>
+                          </Tooltip>
+                          <Tooltip label="Delete student">
+                            <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete student" onClick={() => handleDelete(s)}><ActionIcon name="delete" /></button>
+                          </Tooltip>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
 
       {/* CREATE MODAL */}
