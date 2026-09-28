@@ -3,9 +3,12 @@ import { useAuth } from "../../context/AuthContext";
 import { classApi, type ClassListItem, type ClassPayload, type ClassUpdatePayload, type ClassFaculty } from "../../api/classes";
 import { subjectApi } from "../../api/subjects";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
 import type { SubjectListItem, SubjectFaculty } from "../../api/subjects";
 import { getApiErrorMessage } from "../../api/client";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 import SchedulePicker from "../../components/SchedulePicker";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
@@ -22,6 +25,7 @@ export default function ManageClasses() {
   // School year state
   const [schoolYears, setSchoolYears] = useState<SchoolYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<number | "">("");
+  const currentSchoolYear = schoolYears.find((y) => y.is_current === 1) ?? null;
 
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -43,6 +47,10 @@ export default function ManageClasses() {
   const [selectedClass, setSelectedClass] = useState<ClassListItem | null>(null);
   const [assignedFaculties, setAssignedFaculties] = useState<ClassFaculty[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [classStudents, setClassStudents] = useState<EnrollmentListItem[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<"teachers" | "students">("teachers");
   const [showAssignModal, setShowAssignModal] = useState(false);
 
   // Assign modal state
@@ -104,22 +112,51 @@ export default function ManageClasses() {
   }, [selectedYearId]);
 
   // ========== DETAIL VIEW HELPERS ==========
-  const openClassDetail = async (cls: ClassListItem) => {
-    setSelectedClass(cls);
+  const loadClassFaculties = async (classId: string) => {
     setDetailLoading(true);
     try {
-      const assignedRes = await classApi.getFaculties(cls.id);
+      const assignedRes = await classApi.getFaculties(classId);
       setAssignedFaculties(assignedRes.data.data || []);
-    } catch {
-      setToast({ message: "Failed to load class details", type: "error" });
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to load class details"), type: "error" });
     } finally {
       setDetailLoading(false);
     }
   };
 
+  const loadClassStudents = async (classId: string) => {
+    setStudentsLoading(true);
+    setStudentsError(null);
+    try {
+      if (!currentSchoolYear) {
+        setClassStudents([]);
+        setStudentsError("No current school year is set for this school, so the class roster can't be loaded.");
+        return;
+      }
+      const res = await enrollmentApi.getByClassAndSchoolYear(classId, currentSchoolYear.id);
+      setClassStudents((res.data.data || []).filter((e) => e.status === "active"));
+    } catch (err: unknown) {
+      setStudentsError(getApiErrorMessage(err, "Failed to load the enrolled students"));
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const openClassDetail = async (cls: ClassListItem) => {
+    setSelectedClass(cls);
+    setAssignedFaculties([]);
+    setClassStudents([]);
+    setStudentsError(null);
+    setDetailTab("teachers");
+    await Promise.all([loadClassFaculties(cls.id), loadClassStudents(cls.id)]);
+  };
+
   const closeClassDetail = () => {
     setSelectedClass(null);
     setAssignedFaculties([]);
+    setClassStudents([]);
+    setStudentsError(null);
+    setDetailTab("teachers");
     resetAssignModal();
   };
 
@@ -357,8 +394,37 @@ export default function ManageClasses() {
           )}
         </div>
 
+        {/* Detail Tabs */}
+        <div style={{ display: "flex", gap: "1.5rem", borderBottom: "1px solid var(--ml-border)", marginBottom: "1.5rem" }}>
+          {(["teachers", "students"] as const).map((tab) => {
+            const isActive = detailTab === tab;
+            const label = tab === "teachers" ? "Teachers" : "Students";
+            const count = tab === "teachers" ? assignedFaculties.length : classStudents.length;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setDetailTab(tab)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  outline: "none",
+                  borderBottom: isActive ? "2px solid var(--ml-primary)" : "2px solid transparent",
+                  padding: "0.75rem 0",
+                  color: isActive ? "var(--ml-primary)" : "var(--ml-text-muted)",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+
         {/* Assigned Teachers Section */}
-        {detailLoading ? (
+        {detailTab === "teachers" && (detailLoading ? (
           <div className="mgmt-loading">Loading teachers...</div>
         ) : (
           <div className="mgmt-section">
@@ -387,8 +453,12 @@ export default function ManageClasses() {
                       <td>{f.email}</td>
                       <td>{f.subject_name ? <span className="dash-badge dash-badge--active">{f.subject_name}</span> : "—"}</td>
                       <td style={{ textAlign: "right" }}>
-                        <button className="mgmt-action mgmt-action--edit" onClick={() => openUpdateModal(f)}>Update</button>
-                        <button className="mgmt-action mgmt-action--delete" onClick={() => handleRemoveFaculty(f.id)}>Remove</button>
+                        <Tooltip label="Update teacher">
+                          <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Update teacher" onClick={() => openUpdateModal(f)}><ActionIcon name="edit" /></button>
+                        </Tooltip>
+                        <Tooltip label="Remove teacher">
+                          <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Remove teacher" onClick={() => handleRemoveFaculty(f.id)}><ActionIcon name="remove" /></button>
+                        </Tooltip>
                       </td>
                     </tr>
                   ))}
@@ -396,6 +466,64 @@ export default function ManageClasses() {
               </table>
             )}
           </div>
+        ))}
+
+        {/* Enrolled Students Section */}
+        {detailTab === "students" && (
+        <div className="mgmt-section">
+          <h2 className="mgmt-section-title">
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: "1.25rem", height: "1.25rem" }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+            </svg>
+            Enrolled Students ({classStudents.length})
+            {currentSchoolYear && (
+              <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)", marginLeft: "0.5rem" }}>
+                {currentSchoolYear.name}{currentSchoolYear.is_current === 1 ? " \u00b7 Current" : ""}
+              </span>
+            )}
+          </h2>
+          {studentsLoading ? (
+            <div className="mgmt-loading" style={{ padding: "1.5rem" }}>Loading students...</div>
+          ) : studentsError ? (
+            <div className="mgmt-empty" style={{ padding: "2rem" }}>
+              <p style={{ margin: 0 }}>{studentsError}</p>
+              <button
+                className="mgmt-btn mgmt-btn--ghost"
+                style={{ marginTop: "0.75rem", fontSize: "0.8125rem" }}
+                onClick={() => { if (selectedClass) loadClassStudents(selectedClass.id); }}
+              >
+                Retry
+              </button>
+            </div>
+          ) : classStudents.length === 0 ? (
+            <div className="mgmt-empty" style={{ padding: "2rem" }}>
+              No students enrolled in this class{currentSchoolYear ? ` for ${currentSchoolYear.name}` : " for the current school year"}.
+            </div>
+          ) : (
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "3rem" }}>#</th>
+                  <th>Name</th>
+                  <th>LRN</th>
+                  <th>Email</th>
+                  <th>Enrolled On</th>
+                </tr>
+              </thead>
+              <tbody>
+                {classStudents.map((s, i) => (
+                  <tr key={s.id}>
+                    <td>{i + 1}</td>
+                    <td className="dash-table-bold">{s.student_name}</td>
+                    <td>{s.lrn || "\u2014"}</td>
+                    <td>{s.student_email}</td>
+                    <td>{s.enrolled_at ? new Date(s.enrolled_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "\u2014"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
         )}
 
         {/* ASSIGN TEACHER MODAL */}
@@ -741,8 +869,12 @@ export default function ManageClasses() {
               </div>
 
               <div className="mgmt-card-footer" onClick={(e) => e.stopPropagation()}>
-                <button className="mgmt-action mgmt-action--edit" onClick={() => openEdit(c)}>Edit</button>
-                <button className="mgmt-action mgmt-action--delete" onClick={() => handleDelete(c)}>Delete</button>
+                <Tooltip label="Edit class">
+                  <button className="mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit class" onClick={() => openEdit(c)}><ActionIcon name="edit" /></button>
+                </Tooltip>
+                <Tooltip label="Delete class">
+                  <button className="mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete class" onClick={() => handleDelete(c)}><ActionIcon name="delete" /></button>
+                </Tooltip>
               </div>
             </div>
           ))}
