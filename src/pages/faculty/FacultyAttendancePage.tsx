@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { getApiErrorMessage } from "../../api/client";
 import {
   classApi,
   attendanceApi,
@@ -25,6 +26,19 @@ interface ClassCardData {
 function getRate(p: number, t: number) { return t > 0 ? Math.round((p / t) * 100) : 0; }
 function rateColor(r: number) { return r >= 75 ? COLORS.present : r >= 50 ? COLORS.warning : COLORS.error; }
 
+function LoadError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) {
+  return (
+    <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={COLORS.error} strokeWidth={1.5} style={{ margin: "0 auto 1rem" }}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      </svg>
+      <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9375rem", color: "var(--ml-text)" }}>{title}</p>
+      <p style={{ margin: "0.5rem 0 0", fontSize: "0.8125rem", color: "var(--ml-text-muted)" }}>{message}</p>
+      <button className="mgmt-btn mgmt-btn--primary" onClick={onRetry} style={{ marginTop: "1rem", fontSize: "0.8125rem" }}>Retry</button>
+    </div>
+  );
+}
+
 export default function FacultyAttendancePage() {
   const { user } = useAuth();
   const [toast, setToast] = useState<ToastState>(null);
@@ -32,10 +46,12 @@ export default function FacultyAttendancePage() {
 
   const [classCards, setClassCards] = useState<ClassCardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cardsError, setCardsError] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<FacultyClassAssignment | null>(null);
 
   const [activeTab, setActiveTab] = useState<"attendance" | "history">("attendance");
   const [classEnrollments, setClassEnrollments] = useState<EnrollmentListItem[]>([]);
+  const [enrollmentsError, setEnrollmentsError] = useState<string | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSubjectId, setCreateSubjectId] = useState("");
@@ -50,10 +66,12 @@ export default function FacultyAttendancePage() {
   const [spreadSessions, setSpreadSessions] = useState<{ date: string; subject_id: string; subject_name: string; statuses: Record<string, AttendanceStatus> }[]>([]);
   const [spreadStudents, setSpreadStudents] = useState<{ student_id: string; student_name: string; lrn: string | null }[]>([]);
   const [spreadLoading, setSpreadLoading] = useState(false);
+  const [spreadError, setSpreadError] = useState<string | null>(null);
 
   const [attSessions, setAttSessions] = useState<{ date: string; subject_id: string; subject_name: string; statuses: Record<string, AttendanceStatus> }[]>([]);
   const [attStudents, setAttStudents] = useState<{ student_id: string; student_name: string; lrn: string | null }[]>([]);
   const [attLoading, setAttLoading] = useState(false);
+  const [attError, setAttError] = useState<string | null>(null);
 
   const [pendingEdits, setPendingEdits] = useState<Map<string, AttendanceStatus>>(new Map());
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -69,6 +87,7 @@ export default function FacultyAttendancePage() {
   const loadClassCards = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setCardsError(null);
     try {
       const [res, syRes] = await Promise.all([
         classApi.getAssignedClasses(user.id),
@@ -102,14 +121,34 @@ export default function FacultyAttendancePage() {
         };
       });
       setClassCards(cards);
-    } catch {
-      setClassCards([]);
+    } catch (err) {
+      const message = getApiErrorMessage(err, "Failed to load your assigned classes");
+      setCardsError(message);
+      setToast({ message, type: "error" });
     } finally {
       setLoading(false);
     }
   }, [user, today, selectedPeriod]);
 
   useEffect(() => { loadClassCards(); }, [loadClassCards]);
+
+  const loadClassEnrollments = useCallback(async (classId: string) => {
+    setEnrollmentsError(null);
+    try {
+      const syRes = await schoolYearApi.getCurrent(user!.school_id!);
+      const sy = syRes.data.data;
+      if (!sy) {
+        setClassEnrollments([]);
+        return;
+      }
+      const enrRes = await enrollmentApi.getByClassAndSchoolYear(classId, sy.id);
+      setClassEnrollments((enrRes.data.data || []).filter(e => e.status === "active"));
+    } catch (err) {
+      const message = getApiErrorMessage(err, "Failed to load the class roster");
+      setEnrollmentsError(message);
+      setToast({ message, type: "error" });
+    }
+  }, [user]);
 
   const openClass = useCallback(async (assignment: FacultyClassAssignment) => {
     setSelectedClass(assignment);
@@ -122,19 +161,13 @@ export default function FacultyAttendancePage() {
     setHistDateTo("");
     setAttSubjectFilter("");
 
-    try {
-      const syRes = await schoolYearApi.getCurrent(user!.school_id!);
-      const sy = syRes.data.data;
-      if (sy) {
-        const enrRes = await enrollmentApi.getByClassAndSchoolYear(assignment.id, sy.id);
-        setClassEnrollments((enrRes.data.data || []).filter(e => e.status === "active"));
-      }
-    } catch { /* ignore */ }
-  }, [user]);
+    await loadClassEnrollments(assignment.id);
+  }, [loadClassEnrollments]);
 
   const loadAttendanceSpreadsheet = useCallback(async () => {
     if (!selectedClass) return;
     setAttLoading(true);
+    setAttError(null);
     try {
       const periodParam = selectedPeriod || undefined;
       const [sessRes, histRes] = await Promise.all([
@@ -176,7 +209,11 @@ export default function FacultyAttendancePage() {
       const students = classEnrollments.map(e => ({ student_id: e.student_id, student_name: e.student_name, lrn: e.lrn ?? null }));
       setAttSessions(sessionStatuses);
       setAttStudents(students);
-    } catch { setAttSessions([]); setAttStudents([]); }
+    } catch (err) {
+      const message = getApiErrorMessage(err, "Failed to load the attendance spreadsheet");
+      setAttError(message);
+      setToast({ message, type: "error" });
+    }
     finally { setAttLoading(false); }
   }, [selectedClass, classEnrollments, selectedPeriod]);
 
@@ -296,6 +333,7 @@ export default function FacultyAttendancePage() {
   const openHistorySpreadsheet = useCallback(async () => {
     if (!selectedClass) return;
     setSpreadLoading(true);
+    setSpreadError(null);
     try {
       const subjectFilter = histSubjectFilter || undefined;
       const res = await attendanceApi.getHistory({
@@ -333,7 +371,11 @@ export default function FacultyAttendancePage() {
       const students = classEnrollments.map(e => ({ student_id: e.student_id, student_name: e.student_name, lrn: e.lrn ?? null }));
       setSpreadSessions(sessionStatuses);
       setSpreadStudents(students);
-    } catch { setSpreadSessions([]); setSpreadStudents([]); }
+    } catch (err) {
+      const message = getApiErrorMessage(err, "Failed to load the attendance history spreadsheet");
+      setSpreadError(message);
+      setToast({ message, type: "error" });
+    }
     finally { setSpreadLoading(false); }
   }, [selectedClass, histSubjectFilter, histDateFrom, histDateTo, classEnrollments, selectedPeriod]);
 
@@ -371,6 +413,8 @@ export default function FacultyAttendancePage() {
         </div>
         {loading ? (
           <div className="mgmt-loading">Loading...</div>
+        ) : cardsError ? (
+          <LoadError title="Couldn't load your assigned classes" message={cardsError} onRetry={loadClassCards} />
         ) : classCards.length === 0 ? (
           <div className="mgmt-empty">No classes assigned to you.</div>
         ) : (
@@ -565,7 +609,11 @@ export default function FacultyAttendancePage() {
           </div>
 
           {attLoading ? <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading spreadsheet...</div>
-          : attSessions.length === 0 ? (
+          : attError ? (
+            <LoadError title="Couldn't load attendance" message={attError} onRetry={loadAttendanceSpreadsheet} />
+          ) : enrollmentsError ? (
+            <LoadError title="Couldn't load the class roster" message={enrollmentsError} onRetry={() => loadClassEnrollments(selectedClass.id)} />
+          ) : attSessions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ml-text-muted)" strokeWidth="1.5" style={{ margin: "0 auto 1rem" }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
@@ -732,7 +780,11 @@ export default function FacultyAttendancePage() {
           </div>
 
           {spreadLoading ? <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading spreadsheet...</div>
-          : spreadSessions.length === 0 ? (
+          : spreadError ? (
+            <LoadError title="Couldn't load attendance history" message={spreadError} onRetry={openHistorySpreadsheet} />
+          ) : enrollmentsError ? (
+            <LoadError title="Couldn't load the class roster" message={enrollmentsError} onRetry={() => loadClassEnrollments(selectedClass.id)} />
+          ) : spreadSessions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ml-text-muted)" strokeWidth="1.5" style={{ margin: "0 auto 1rem" }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
