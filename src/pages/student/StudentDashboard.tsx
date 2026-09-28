@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatures } from "../../context/FeaturesContext";
 import { enrollmentApi, type StudentEnrollment } from "../../api/enrollments";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
 import { attendanceApi, type StudentSubjectAttendance, type StudentAttendanceDetail } from "../../api/classes";
@@ -7,6 +8,8 @@ import { COLORS } from "../../constant/colors";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
+  const canViewAttendance = isEnabled("attendance");
   const [enrollment, setEnrollment] = useState<StudentEnrollment | null>(null);
   const [currentSY, setCurrentSY] = useState<SchoolYear | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,12 +28,21 @@ export default function StudentDashboard() {
         setCurrentSY(sy);
 
         if (sy) {
-          const [enrollRes, attendanceRes] = await Promise.all([
-            enrollmentApi.getByStudentAndSchoolYear(user.id, sy.id),
-            attendanceApi.getStudentBySubject(sy.id),
-          ]);
+          const enrollRes = await enrollmentApi.getByStudentAndSchoolYear(user.id, sy.id);
           setEnrollment(enrollRes.data.data);
-          setAttendanceBySubject(attendanceRes.data.data || []);
+
+          // Fetched separately so a switched-off attendance feature cannot
+          // blank out the rest of the dashboard.
+          if (canViewAttendance) {
+            try {
+              const attendanceRes = await attendanceApi.getStudentBySubject(sy.id);
+              setAttendanceBySubject(attendanceRes.data.data || []);
+            } catch {
+              setAttendanceBySubject([]);
+            }
+          } else {
+            setAttendanceBySubject([]);
+          }
         }
       } catch {
         // silently fail
@@ -40,7 +52,7 @@ export default function StudentDashboard() {
       }
     };
     fetchData();
-  }, [user?.id, user?.school_id]);
+  }, [user?.id, user?.school_id, canViewAttendance]);
 
   const fetchAttendanceDetail = async (subjectId: string, classId: string) => {
     if (attendanceDetails[subjectId]) return;
@@ -125,6 +137,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Attendance by Subject Section */}
+      {canViewAttendance && (
       <div className="dash-section" style={{ marginTop: "1.5rem" }}>
         <h2 className="dash-section-title">Attendance by Subject</h2>
         {attendanceLoading ? (
@@ -246,6 +259,7 @@ export default function StudentDashboard() {
           </div>
         )}
       </div>
+      )}
 
       {/* Subjects Section */}
       <div className="dash-section">

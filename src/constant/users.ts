@@ -1,9 +1,13 @@
+import type { FeatureKey } from "./features";
+
 export type UserRole = "super_admin" | "school_admin" | "faculty" | "student";
 
 export interface NavItem {
   label: string;
   path: string;
   icon: string;
+  /** Hidden when the active school has this feature switched off. */
+  feature?: FeatureKey;
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -18,7 +22,6 @@ export const ROLE_SIDEBAR: Record<UserRole, NavItem[]> = {
     { label: "Dashboard", path: "/dashboard", icon: "dashboard" },
     { label: "Schools", path: "/dashboard/schools", icon: "schools" },
     { label: "Modules", path: "/dashboard/modules", icon: "modules" },
-    { label: "Subjects", path: "/dashboard/subjects", icon: "modules" },
     { label: "Users", path: "/dashboard/users", icon: "users" },
     { label: "Reports", path: "/dashboard/reports", icon: "reports" },
     { label: "Settings", path: "/dashboard/settings", icon: "settings" },
@@ -28,7 +31,7 @@ export const ROLE_SIDEBAR: Record<UserRole, NavItem[]> = {
     { label: "Faculties", path: "/dashboard/faculties", icon: "faculties" },
     { label: "Students", path: "/dashboard/students", icon: "students" },
     { label: "Classes", path: "/dashboard/classes", icon: "classes" },
-    { label: "Enrollments", path: "/dashboard/enrollments", icon: "classes" },
+    { label: "Enrollments", path: "/dashboard/enrollments", icon: "classes", feature: "enrollments" },
     { label: "Modules", path: "/dashboard/modules", icon: "modules" },
     { label: "Subjects", path: "/dashboard/subjects", icon: "modules" },
     { label: "Reports", path: "/dashboard/reports", icon: "reports" },
@@ -37,16 +40,16 @@ export const ROLE_SIDEBAR: Record<UserRole, NavItem[]> = {
   faculty: [
     { label: "Dashboard", path: "/dashboard", icon: "dashboard" },
     { label: "My Classes", path: "/dashboard/classes", icon: "classes" },
-    { label: "Attendance", path: "/dashboard/attendance", icon: "reports" },
-    { label: "Gradebook", path: "/dashboard/gradebook", icon: "grades" },
+    { label: "Attendance", path: "/dashboard/attendance", icon: "reports", feature: "attendance" },
+    { label: "Gradebook", path: "/dashboard/gradebook", icon: "grades", feature: "gradebook" },
     { label: "Reports", path: "/dashboard/reports", icon: "reports" },
     { label: "Settings", path: "/dashboard/settings", icon: "settings" },
   ],
   student: [
     { label: "Dashboard", path: "/dashboard", icon: "dashboard" },
     { label: "My Class", path: "/dashboard/classes", icon: "classes" },
-    { label: "My Attendance", path: "/dashboard/student-attendance", icon: "reports" },
-    { label: "Grades", path: "/dashboard/grades", icon: "grades" },
+    { label: "My Attendance", path: "/dashboard/student-attendance", icon: "reports", feature: "attendance" },
+    { label: "Grades", path: "/dashboard/grades", icon: "grades", feature: "gradebook" },
     { label: "Schedule", path: "/dashboard/schedule", icon: "schedule" },
     { label: "Settings", path: "/dashboard/settings", icon: "settings" },
   ],

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatures } from "../../context/FeaturesContext";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../api/client";
 
@@ -38,7 +39,9 @@ interface ClassData {
 
 export default function SchoolAdminDashboard() {
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
   const navigate = useNavigate();
+  const canViewAttendanceReports = isEnabled("attendance_reports");
   const [faculties, setFaculties] = useState<FacultyData[]>([]);
   const [students, setStudents] = useState<StudentData[]>([]);
   const [modules, setModules] = useState<ModuleData[]>([]);
@@ -180,15 +183,17 @@ export default function SchoolAdminDashboard() {
           <span className="dash-stat-value">{loading ? "..." : classes.length}</span>
         </div>
 
-        <div className="dash-stat-card dash-stat-card--teal" onClick={goToAttendanceReport} style={{ cursor: "pointer" }}>
-          <div className="dash-stat-icon dash-stat-icon--teal">
-            <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        {canViewAttendanceReports && (
+          <div className="dash-stat-card dash-stat-card--teal" onClick={goToAttendanceReport} style={{ cursor: "pointer" }}>
+            <div className="dash-stat-icon dash-stat-icon--teal">
+              <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <span className="dash-stat-label">Attendance Report</span>
+            <span className="dash-stat-value">View</span>
           </div>
-          <span className="dash-stat-label">Attendance Report</span>
-          <span className="dash-stat-value">View</span>
-        </div>
+        )}
       </div>
 
       <div className="dash-columns">

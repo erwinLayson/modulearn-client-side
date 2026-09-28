@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useFeatures } from "../../context/FeaturesContext";
 import { attendanceApi, type FacultyDashboardSummary } from "../../api/classes";
 import apiClient from "../../api/client";
 import { COLORS } from "../../constant/colors";
@@ -25,6 +26,8 @@ interface ClassData {
 
 export default function FacultyDashboard() {
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
+  const canViewAttendance = isEnabled("attendance");
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [modules, setModules] = useState<ModuleData[]>([]);
   const [students, setStudents] = useState<StudentData[]>([]);
@@ -37,25 +40,42 @@ export default function FacultyDashboard() {
 
     const fetchData = async () => {
       try {
-        const [classesRes, modulesRes, studentsRes, summaryRes] = await Promise.all([
+        const [classesRes, modulesRes, studentsRes] = await Promise.all([
           apiClient.get<{ data: ClassData[] }>(`/classes/faculty/${user.id}`),
           apiClient.get<{ data: ModuleData[] }>(`/modules/school/${user.school_id}`),
           apiClient.get<{ data: StudentData[] }>(`/students/school/${user.school_id}`),
-          attendanceApi.getFacultySummary(),
         ]);
         setClasses(classesRes.data.data || []);
         setModules(modulesRes.data.data || []);
         setStudents(studentsRes.data.data || []);
-        setAttendanceSummary(summaryRes.data.data);
       } catch {
         // silently fail
       } finally {
         setLoading(false);
+      }
+    };
+
+    // Kept out of the Promise.all above so a disabled attendance feature
+    // cannot blank out the rest of the dashboard.
+    const fetchSummary = async () => {
+      if (!canViewAttendance) {
+        setAttendanceSummary(null);
+        setSummaryLoading(false);
+        return;
+      }
+      try {
+        const summaryRes = await attendanceApi.getFacultySummary();
+        setAttendanceSummary(summaryRes.data.data);
+      } catch {
+        setAttendanceSummary(null);
+      } finally {
         setSummaryLoading(false);
       }
     };
+
     fetchData();
-  }, [user?.id, user?.school_id]);
+    fetchSummary();
+  }, [user?.id, user?.school_id, canViewAttendance]);
 
   if (!user) return null;
 
@@ -111,6 +131,7 @@ export default function FacultyDashboard() {
       </div>
 
       {/* Attendance Summary Section */}
+      {canViewAttendance && (
       <div className="dash-section" style={{ marginTop: "1.5rem" }}>
         <h2 className="dash-section-title">Today's Attendance</h2>
         {summaryLoading ? (
@@ -149,8 +170,10 @@ export default function FacultyDashboard() {
           <div className="dash-empty"><p>Unable to load attendance summary.</p></div>
         )}
       </div>
+      )}
 
       {/* This Week Summary */}
+      {canViewAttendance && (
       <div className="dash-section" style={{ marginTop: "1.5rem" }}>
         <h2 className="dash-section-title">This Week</h2>
         {summaryLoading ? (
@@ -178,6 +201,7 @@ export default function FacultyDashboard() {
           <div className="dash-empty"><p>Unable to load weekly summary.</p></div>
         )}
       </div>
+      )}
 
       <div className="dash-columns">
         <div className="dash-section">

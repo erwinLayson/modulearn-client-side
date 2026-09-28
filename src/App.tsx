@@ -1,5 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { FeaturesProvider } from "./context/FeaturesContext";
+import FeatureGate from "./components/FeatureGate";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -24,6 +26,7 @@ import StudentAttendancePage from "./pages/student/StudentAttendancePage";
 import StudentClassPage from "./pages/student/StudentClassPage";
 import GradebookPage from "./pages/faculty/GradebookPage";
 import GradebookSubject from "./pages/faculty/GradebookSubject";
+import AdvisoryReportCardsPage from "./pages/faculty/AdvisoryReportCardsPage";
 import FacultyAttendancePage from "./pages/faculty/FacultyAttendancePage";
 import StudentGradebookPage from "./pages/student/StudentGradebookPage";
 import SchoolSettings from "./pages/school_admin/SchoolSettings";
@@ -55,8 +58,9 @@ const ClassesRoute = () => {
 
 const SubjectsRoute = () => {
   const { user } = useAuth();
+  // Subjects are per-school: the super admin has no subjects page of their own.
   if (user?.role === "super_admin") {
-    return <ManageSubjectsAdmin />;
+    return <Navigate to="/dashboard" replace />;
   }
   if (user?.role === "school_admin") {
     return <ManageSubjects />;
@@ -68,42 +72,113 @@ const SubjectsRoute = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+      <FeaturesProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<MasterLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="schools" element={<ManageSchools />} />
-              <Route path="users" element={<ManageUsers />} />
-              <Route path="faculties" element={<ManageFaculties />} />
-              <Route path="students" element={<ManageStudents />} />
-              <Route
-                path="students/:studentId/academic-record"
-                element={<ProtectedRoute allowedRoles={["school_admin"]} />}
-              >
-                <Route index element={<StudentAcademicRecordPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<MasterLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="schools" element={<ManageSchools />} />
+                <Route path="users" element={<ManageUsers />} />
+                <Route path="faculties" element={<ManageFaculties />} />
+                <Route path="students" element={<ManageStudents />} />
+                <Route
+                  path="students/:studentId/academic-record"
+                  element={<ProtectedRoute allowedRoles={["school_admin", "faculty"]} />}
+                >
+                  <Route
+                    index
+                    element={
+                      <FeatureGate feature="academic_record">
+                        <StudentAcademicRecordPage />
+                      </FeatureGate>
+                    }
+                  />
+                </Route>
+                <Route path="classes" element={<ClassesRoute />} />
+                <Route
+                  path="classes/:classId/report-cards"
+                  element={<ProtectedRoute allowedRoles={["school_admin", "faculty"]} />}
+                >
+                  <Route
+                    index
+                    element={
+                      <FeatureGate feature="academic_record">
+                        <AdvisoryReportCardsPage />
+                      </FeatureGate>
+                    }
+                  />
+                </Route>
+                <Route
+                  path="enrollments"
+                  element={
+                    <FeatureGate feature="enrollments">
+                      <ManageEnrollments />
+                    </FeatureGate>
+                  }
+                />
+                <Route path="modules" element={<ManageModules />} />
+                <Route path="subjects" element={<SubjectsRoute />} />
+                <Route
+                  path="attendance-report"
+                  element={
+                    <FeatureGate feature="attendance_reports">
+                      <AttendanceReport />
+                    </FeatureGate>
+                  }
+                />
+                <Route
+                  path="student-attendance"
+                  element={
+                    <FeatureGate feature="attendance">
+                      <StudentAttendancePage />
+                    </FeatureGate>
+                  }
+                />
+                <Route
+                  path="attendance"
+                  element={
+                    <FeatureGate feature="attendance">
+                      <FacultyAttendancePage />
+                    </FeatureGate>
+                  }
+                />
+                <Route
+                  path="gradebook"
+                  element={
+                    <FeatureGate feature="gradebook">
+                      <GradebookPage />
+                    </FeatureGate>
+                  }
+                />
+                <Route
+                  path="gradebook/:classId/:subjectId"
+                  element={
+                    <FeatureGate feature="gradebook">
+                      <GradebookSubject />
+                    </FeatureGate>
+                  }
+                />
+                <Route path="reports" element={<PlaceholderPage />} />
+                <Route path="settings" element={<SettingsRoute />} />
+                <Route
+                  path="grades"
+                  element={
+                    <FeatureGate feature="gradebook">
+                      <StudentGradebookPage />
+                    </FeatureGate>
+                  }
+                />
+                <Route path="schedule" element={<PlaceholderPage />} />
               </Route>
-              <Route path="classes" element={<ClassesRoute />} />
-              <Route path="enrollments" element={<ManageEnrollments />} />
-              <Route path="modules" element={<ManageModules />} />
-              <Route path="subjects" element={<SubjectsRoute />} />
-              <Route path="attendance-report" element={<AttendanceReport />} />
-              <Route path="student-attendance" element={<StudentAttendancePage />} />
-              <Route path="attendance" element={<FacultyAttendancePage />} />
-              <Route path="gradebook" element={<GradebookPage />} />
-              <Route path="gradebook/:classId/:subjectId" element={<GradebookSubject />} />
-              <Route path="reports" element={<PlaceholderPage />} />
-              <Route path="settings" element={<SettingsRoute />} />
-              <Route path="grades" element={<StudentGradebookPage />} />
-              <Route path="schedule" element={<PlaceholderPage />} />
             </Route>
-          </Route>
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </FeaturesProvider>
     </AuthProvider>
   );
 }

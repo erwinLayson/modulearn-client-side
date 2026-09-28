@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { schoolApi, type SchoolListItem } from "../../api/schools";
-import { classApi, type ClassListItem } from "../../api/classes";
-import { subjectApi, type SubjectListItem } from "../../api/subjects";
+import { featureApi, type SchoolFeature } from "../../api/features";
+import { getApiErrorMessage } from "../../api/client";
+import type { FeatureKey } from "../../constant/features";
 import Toast from "../../components/Toast";
+import ActionIcon from "../../components/ActionIcon";
+import Tooltip from "../../components/Tooltip";
 
 const SCHOOL_LEVELS = ["", "Elementary", "Junior High", "Senior High", "College"];
-type DetailTab = "classes" | "subjects";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 
@@ -17,11 +19,14 @@ export default function ManageSchools() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const [selectedSchool, setSelectedSchool] = useState<SchoolListItem | null>(null);
-  const [detailClasses, setDetailClasses] = useState<ClassListItem[]>([]);
-  const [detailSubjects, setDetailSubjects] = useState<SubjectListItem[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailTab, setDetailTab] = useState<DetailTab>("classes");
   const dismissToast = useCallback(() => setToast(null), []);
+
+  // Feature switches for the selected school (super admin only)
+  const [featureList, setFeatureList] = useState<SchoolFeature[]>([]);
+  const [featureBaseline, setFeatureBaseline] = useState<Record<string, boolean>>({});
+  const [featuresLoading, setFeaturesLoading] = useState(false);
+  const [featuresSaving, setFeaturesSaving] = useState(false);
+  const featuresDirty = featureList.some((f) => featureBaseline[f.key] !== f.is_enabled);
 
   const fetchSchools = useCallback(async () => {
     try {
@@ -36,43 +41,68 @@ export default function ManageSchools() {
 
   useEffect(() => { fetchSchools(); }, [fetchSchools]);
 
+  const loadFeatures = useCallback(async (schoolId: number) => {
+    setFeaturesLoading(true);
+    try {
+      const { data } = await featureApi.get(schoolId);
+      const features = data.data.features || [];
+      setFeatureList(features);
+      setFeatureBaseline(
+        Object.fromEntries(features.map((f) => [f.key, f.is_enabled]))
+      );
+    } catch (err) {
+      setFeatureList([]);
+      setFeatureBaseline({});
+      setToast({ message: getApiErrorMessage(err, "Failed to load features"), type: "error" });
+    } finally {
+      setFeaturesLoading(false);
+    }
+  }, []);
+
+  const toggleFeature = useCallback((key: FeatureKey) => {
+    setFeatureList((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, is_enabled: !f.is_enabled } : f))
+    );
+  }, []);
+
+  const saveFeatures = useCallback(async () => {
+    if (!selectedSchool) return;
+    setFeaturesSaving(true);
+    try {
+      const { data } = await featureApi.update(
+        selectedSchool.school_id,
+        featureList.map((f) => ({ key: f.key, is_enabled: f.is_enabled }))
+      );
+      const features = data.data.features || [];
+      setFeatureList(features);
+      setFeatureBaseline(
+        Object.fromEntries(features.map((f) => [f.key, f.is_enabled]))
+      );
+      setToast({ message: "Feature settings saved", type: "success" });
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err, "Failed to save features"), type: "error" });
+    } finally {
+      setFeaturesSaving(false);
+    }
+  }, [selectedSchool, featureList]);
+
   const closeDetail = useCallback(() => {
     setSelectedSchool(null);
-    setDetailClasses([]);
-    setDetailSubjects([]);
-    setDetailTab("classes");
+    setFeatureList([]);
+    setFeatureBaseline({});
   }, []);
 
-  const handleSchoolClick = useCallback(async (school: SchoolListItem) => {
+  const handleSchoolClick = useCallback((school: SchoolListItem) => {
     setSelectedSchool(school);
-    setDetailTab("classes");
-    setDetailClasses([]);
-    setDetailSubjects([]);
+    setFeatureList([]);
+    setFeatureBaseline({});
   }, []);
 
+  // Load the switches when a school is opened (super admins only)
   useEffect(() => {
-    if (!selectedSchool) return;
-    let cancelled = false;
-    setDetailLoading(true);
-    (async () => {
-      try {
-        const [classesRes, subjectsRes] = await Promise.all([
-          classApi.getBySchoolId(selectedSchool.school_id),
-          subjectApi.getBySchoolId(selectedSchool.school_id),
-        ]);
-        if (cancelled) return;
-        setDetailClasses(classesRes.data.data || []);
-        setDetailSubjects(subjectsRes.data.data || []);
-      } catch {
-        if (!cancelled) setToast({ message: "Failed to load school details", type: "error" });
-      } finally {
-        if (!cancelled) setDetailLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedSchool]);
+    if (!selectedSchool || !isSuperAdmin) return;
+    void loadFeatures(selectedSchool.school_id);
+  }, [selectedSchool, isSuperAdmin, loadFeatures]);
 
   if (!user) return null;
 
@@ -209,8 +239,21 @@ export default function ManageSchools() {
                 
                 {isSuperAdmin && (
                   <div className="mgmt-card-footer" style={{ justifyContent: "flex-end" }}>
-                    <button className="mgmt-btn mgmt-btn--ghost mgmt-action mgmt-action--edit" disabled>Edit</button>
-                    <button className="mgmt-btn mgmt-btn--ghost mgmt-action mgmt-action--delete" disabled>Delete</button>
+                    <Tooltip label="Manage features">
+                      <button
+                        className="mgmt-btn mgmt-btn--ghost mgmt-action mgmt-action--edit mgmt-action--icon"
+                        aria-label="Manage features"
+                        onClick={(e) => { e.stopPropagation(); handleSchoolClick(s); }}
+                      >
+                        <ActionIcon name="features" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip label="Edit school">
+                      <button className="mgmt-btn mgmt-btn--ghost mgmt-action mgmt-action--edit mgmt-action--icon" aria-label="Edit school" disabled><ActionIcon name="edit" /></button>
+                    </Tooltip>
+                    <Tooltip label="Delete school">
+                      <button className="mgmt-btn mgmt-btn--ghost mgmt-action mgmt-action--delete mgmt-action--icon" aria-label="Delete school" disabled><ActionIcon name="delete" /></button>
+                    </Tooltip>
                   </div>
                 )}
               </div>
@@ -299,122 +342,69 @@ export default function ManageSchools() {
               </div>
             </div>
 
-            {/* Tabs for Classes and Subjects */}
-            <div style={{ borderBottom: "1px solid var(--ml-border)", padding: "0 1.5rem" }}>
-              <nav style={{ display: "flex", gap: "0.5rem" }} role="tablist">
-                <button
-                  role="tab"
-                  aria-selected={detailTab === "classes"}
-                  className="mgmt-btn mgmt-btn--ghost"
-                  onClick={() => setDetailTab("classes")}
-                  style={{
-                    padding: "0.75rem 1rem",
-                    fontSize: "0.875rem",
-                    borderBottom: detailTab === "classes" ? "2px solid var(--ml-accent)" : "2px solid transparent",
-                    borderRadius: 0,
-                    background: detailTab === "classes" ? "rgba(22, 132, 91, 0.05)" : "transparent",
-                    color: detailTab === "classes" ? "var(--ml-accent)" : "var(--ml-text-secondary)",
-                  }}
-                >
-                  Classes ({detailClasses.length})
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={detailTab === "subjects"}
-                  className="mgmt-btn mgmt-btn--ghost"
-                  onClick={() => setDetailTab("subjects")}
-                  style={{
-                    padding: "0.75rem 1rem",
-                    fontSize: "0.875rem",
-                    borderBottom: detailTab === "subjects" ? "2px solid var(--ml-accent)" : "2px solid transparent",
-                    borderRadius: 0,
-                    background: detailTab === "subjects" ? "rgba(22, 132, 91, 0.05)" : "transparent",
-                    color: detailTab === "subjects" ? "var(--ml-accent)" : "var(--ml-text-secondary)",
-                  }}
-                >
-                  Subjects ({detailSubjects.length})
-                </button>
-              </nav>
-            </div>
-
-            {/* Classes Tab */}
-            {detailTab === "classes" && (
-              <div role="tabpanel" style={{ padding: "1.5rem" }}>
-                {detailLoading ? (
-                  <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading classes...</div>
-                ) : detailClasses.length === 0 ? (
-                  <div className="mgmt-empty" style={{ padding: "2rem" }}>No classes found for this school.</div>
+            {/* Features Section */}
+            {isSuperAdmin && (
+              <div style={{ padding: "1.5rem" }}>
+                <h3 style={{ margin: "0 0 1rem", fontSize: "0.75rem", fontWeight: 500, color: "var(--ml-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Features</h3>
+                {featuresLoading ? (
+                  <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading features...</div>
+                ) : featureList.length === 0 ? (
+                  <div className="mgmt-empty" style={{ padding: "2rem" }}>No features available.</div>
                 ) : (
-                  <div className="mgmt-table-wrap">
-                    <table className="mgmt-table mgmt-table--compact">
-                      <thead>
-                        <tr>
-                          <th>Class Name</th>
-                          <th>Section</th>
-                          <th>Grade Level</th>
-                          <th>Capacity</th>
-                          <th>Adviser</th>
-                          <th>Module</th>
-                          <th>Schedule</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {detailClasses.map((c) => (
-                          <tr key={c.id}>
-                            <td className="mgmt-table-bold">{c.class_name}</td>
-                            <td>{c.section || "—"}</td>
-                            <td>{c.grade_level || "—"}</td>
-                            <td>{c.capacity ?? "—"}</td>
-                            <td>{c.faculty_name || "—"}</td>
-                            <td>{c.module_title || "—"}</td>
-                            <td className="mgmt-table-address mgmt-table-address--wrap">
-                              {c.schedule && Array.isArray(c.schedule) && c.schedule.length > 0
-                                ? c.schedule.map((sched, idx) => (
-                                    <span key={idx} style={{ display: "block", fontSize: "0.75rem" }}>
-                                      {sched.day}: {sched.start_time} - {sched.end_time} {sched.room ? `(${sched.room})` : ""}
-                                    </span>
-                                  ))
-                                : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Subjects Tab */}
-            {detailTab === "subjects" && (
-              <div role="tabpanel" style={{ padding: "1.5rem" }}>
-                {detailLoading ? (
-                  <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading subjects...</div>
-                ) : detailSubjects.length === 0 ? (
-                  <div className="mgmt-empty" style={{ padding: "2rem" }}>No subjects found for this school.</div>
-                ) : (
-                  <div className="mgmt-table-wrap">
-                    <table className="mgmt-table mgmt-table--compact">
-                      <thead>
-                        <tr>
-                          <th>Subject Name</th>
-                          <th>Subject Code</th>
-                          <th>Description</th>
-                          <th>Created</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {detailSubjects.map((sub) => (
-                          <tr key={sub.id}>
-                            <td className="mgmt-table-bold">{sub.name}</td>
-                            <td>{sub.subject_code || "—"}</td>
-                            <td className="mgmt-table-address mgmt-table-address--wrap">{sub.description || "—"}</td>
-                            <td>{new Date(sub.created_at).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <>
+                    <p className="feature-actions-note" style={{ marginBottom: "1rem" }}>
+                      Switch a feature off to hide it from this school and block its API. Users of
+                      this school see the change the next time they load a page.
+                    </p>
+                    <div className="feature-list">
+                      {featureList.map((feature) => (
+                        <div key={feature.key} className="feature-row">
+                          <div className="feature-row-info">
+                            <span className="feature-row-label">{feature.label}</span>
+                            <p className="feature-row-desc">{feature.description}</p>
+                          </div>
+                          <span
+                            className={`feature-row-state ${feature.is_enabled ? "feature-row-state--on" : ""}`}
+                          >
+                            {feature.is_enabled ? "On" : "Off"}
+                          </span>
+                          <label className="feature-switch">
+                            <input
+                              type="checkbox"
+                              checked={feature.is_enabled}
+                              onChange={() => toggleFeature(feature.key)}
+                              aria-label={`${feature.label} enabled`}
+                            />
+                            <span className="feature-switch-track" aria-hidden="true" />
+                            <span className="feature-switch-thumb" aria-hidden="true" />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="feature-actions">
+                      <p className="feature-actions-note">
+                        {featuresDirty ? "You have unsaved changes." : "All changes saved."}
+                      </p>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          type="button"
+                          className="mgmt-btn mgmt-btn--ghost"
+                          onClick={() => { if (selectedSchool) void loadFeatures(selectedSchool.school_id); }}
+                          disabled={featuresSaving || !featuresDirty}
+                        >
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          className="mgmt-btn mgmt-btn--primary"
+                          onClick={saveFeatures}
+                          disabled={featuresSaving || !featuresDirty}
+                        >
+                          {featuresSaving ? "Saving..." : "Save changes"}
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}

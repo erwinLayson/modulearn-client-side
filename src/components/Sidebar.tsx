@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import type { ReactElement } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useFeatures } from "../context/FeaturesContext";
 import { ROLE_SIDEBAR, ROLE_LABELS } from "../constant/users";
 import apiClient from "../api/client";
 
@@ -70,11 +71,14 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
+  const { isEnabled } = useFeatures();
   const navigate = useNavigate();
 
   if (!user) return null;
 
-  const navItems = ROLE_SIDEBAR[user.role] ?? [];
+  const navItems = (ROLE_SIDEBAR[user.role] ?? []).filter(
+    (item) => !item.feature || isEnabled(item.feature)
+  );
 
   const handleLogout = async () => {
     try {

@@ -1,0 +1,190 @@
+/* FeatureGate — shown in place of a page whose feature is switched off */
+
+.feature-locked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem 1rem;
+}
+
+.feature-locked-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 26rem;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  background: var(--ml-surface, #fff);
+  border: 1px solid var(--ml-border, #e5e7eb);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.feature-locked-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  color: var(--ml-text-muted, #64748b);
+  background: var(--ml-surface-muted, #f1f5f9);
+  border-radius: 9999px;
+}
+
+.feature-locked-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.feature-locked-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ml-text, #0f172a);
+}
+
+.feature-locked-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ml-text-muted, #64748b);
+}
+
+.feature-locked-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--ml-accent, #0d6efd);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.feature-locked-btn:hover {
+  filter: brightness(0.95);
+}
+
+/* ============================================================
+   Super admin feature switches (ManageSchools > Features tab)
+   ============================================================ */
+
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.feature-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1rem;
+  background: var(--ml-surface, #fff);
+  border: 1px solid var(--ml-border, #e5e7eb);
+  border-radius: 0.5rem;
+}
+
+.feature-row-info {
+  min-width: 0;
+}
+
+.feature-row-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ml-text, #0f172a);
+}
+
+.feature-row-desc {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ml-text-muted, #64748b);
+}
+
+.feature-row-state {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-text-muted, #64748b);
+}
+
+.feature-row-state--on {
+  color: var(--ml-accent, #0d6efd);
+}
+
+.feature-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.5rem;
+  margin-top: 0.125rem;
+}
+
+.feature-switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.feature-switch input:disabled {
+  cursor: not-allowed;
+}
+
+.feature-switch-track {
+  position: absolute;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 9999px;
+  transition: background 0.15s ease;
+  pointer-events: none;
+}
+
+.feature-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  background: #fff;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+
+.feature-switch input:checked ~ .feature-switch-track {
+  background: var(--ml-accent, #0d6efd);
+}
+
+.feature-switch input:checked ~ .feature-switch-thumb {
+  transform: translateX(1.25rem);
+}
+
+.feature-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--ml-border, #e5e7eb);
+}
+
+.feature-actions-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ml-text-muted, #64748b);
+}
