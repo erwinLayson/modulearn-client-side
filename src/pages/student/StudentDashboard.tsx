@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
 import { enrollmentApi, type StudentEnrollment } from "../../api/enrollments";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
-import { attendanceApi, type StudentSubjectAttendance, type StudentAttendanceDetail } from "../../api/classes";
+import { attendanceApi, type StudentSubjectAttendance} from "../../api/classes";
 import { COLORS } from "../../constant/colors";
 
 export default function StudentDashboard() {
@@ -15,8 +15,6 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [attendanceBySubject, setAttendanceBySubject] = useState<StudentSubjectAttendance[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(true);
-  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
-  const [attendanceDetails, setAttendanceDetails] = useState<Record<string, { data: StudentAttendanceDetail[]; total: number; loading: boolean }>>({});
 
   useEffect(() => {
     if (!user?.id || !user?.school_id) return;
@@ -54,26 +52,6 @@ export default function StudentDashboard() {
     fetchData();
   }, [user?.id, user?.school_id, canViewAttendance]);
 
-  const fetchAttendanceDetail = async (subjectId: string, classId: string) => {
-    if (attendanceDetails[subjectId]) return;
-    setAttendanceDetails(prev => ({ ...prev, [subjectId]: { data: [], total: 0, loading: true } }));
-    try {
-      const res = await attendanceApi.getStudentDetail(classId, subjectId);
-      const paginated = res.data.data;
-      setAttendanceDetails(prev => ({ ...prev, [subjectId]: { data: paginated.data, total: paginated.total, loading: false } }));
-    } catch {
-      setAttendanceDetails(prev => ({ ...prev, [subjectId]: { data: [], total: 0, loading: false } }));
-    }
-  };
-
-  const toggleSubject = (subjectId: string, classId: string) => {
-    if (expandedSubject === subjectId) {
-      setExpandedSubject(null);
-    } else {
-      setExpandedSubject(subjectId);
-      fetchAttendanceDetail(subjectId, classId);
-    }
-  };
 
   if (!user) return null;
 
@@ -147,8 +125,6 @@ export default function StudentDashboard() {
         ) : (
           <div className="mgmt-card-grid">
             {attendanceBySubject.map((subject) => {
-              const detail = attendanceDetails[subject.subject_id];
-              const isExpanded = expandedSubject === subject.subject_id;
               return (
                 <div key={subject.subject_id} className="mgmt-card">
                   <div className="mgmt-card-top mgmt-card-top--blue" />
@@ -190,68 +166,6 @@ export default function StudentDashboard() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => toggleSubject(subject.subject_id, subject.class_id)}
-                      style={{
-                        width: "100%",
-                        background: "none",
-                        border: "none",
-                        color: "var(--ml-primary)",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        cursor: "pointer",
-                        padding: "0.5rem 0",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      {isExpanded ? "Hide Details" : "Show Details"}
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
-
-                    {isExpanded && (
-                      <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--ml-border)" }}>
-                        {detail?.loading ? (
-                          <div className="dash-loading">Loading details...</div>
-                        ) : detail && detail.data.length === 0 ? (
-                          <div className="dash-empty" style={{ padding: "1rem" }}>No attendance records for this subject.</div>
-                        ) : detail ? (
-                          <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-                            <table className="mgmt-table mgmt-table--compact" style={{ fontSize: "0.75rem" }}>
-                              <thead>
-                                <tr>
-                                  <th>Date</th>
-                                  <th>Status</th>
-                                  <th>Recorded At</th>
-                                  <th>Marked By</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {detail.data.map((record) => (
-                                  <tr key={`${record.attendance_date}-${record.status}`}>
-                                    <td>{new Date(record.attendance_date).toLocaleDateString()}</td>
-                                    <td>
-                                      <span className={`dash-badge dash-badge--${record.status === "present" ? "success" : "error"}`}>
-                                        {record.status}
-                                      </span>
-                                    </td>
-                                    <td>{new Date(record.recorded_at).toLocaleString()}</td>
-                                    <td>{record.teacher_name}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -261,42 +175,8 @@ export default function StudentDashboard() {
       </div>
       )}
 
-      {/* Subjects Section */}
-      <div className="dash-section">
-        <h2 className="dash-section-title">My Subjects</h2>
-        {loading ? (
-          <div className="dash-loading">Loading...</div>
-        ) : subjects.length === 0 ? (
-          <div className="dash-empty"><p>No subjects assigned yet.</p></div>
-        ) : (
-          <div className="mgmt-card-grid">
-            {subjects.map(s => (
-              <div key={s.id} className="mgmt-card">
-                <div className="mgmt-card-top mgmt-card-top--blue" />
-                <div className="mgmt-card-body">
-                  <div className="mgmt-card-header">
-                    <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
-                      <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="mgmt-card-title">{s.name}</h3>
-                      <span style={{ fontSize: "0.75rem", color: "var(--ml-text-muted)" }}>
-                        {s.teacher_name || "No teacher assigned"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Schedule Section */}
       {schedule.length > 0 && (
-        <div className="dash-section">
+        <div className="dash-section" style={{ marginTop: "1.5rem" }}>
           <h2 className="dash-section-title">Schedule</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
             {schedule.map((s, i) => (
