@@ -123,7 +123,7 @@ export default function StudentDashboard() {
         ) : attendanceBySubject.length === 0 ? (
           <div className="dash-empty"><p>No attendance records yet.</p></div>
         ) : (
-          <div className="mgmt-card-grid">
+          <div className="mgmt-card-grid md:grid-cols-2">
             {attendanceBySubject.map((subject) => {
               return (
                 <div key={subject.subject_id} className="mgmt-card">
