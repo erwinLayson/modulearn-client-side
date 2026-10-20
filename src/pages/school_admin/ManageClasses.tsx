@@ -203,7 +203,9 @@ export default function ManageClasses() {
       try {
         const res = await subjectApi.getFaculties(subjectId);
         const candidates = (res.data.data || []).filter(
-          (f) => f.id !== teacher.id && !assignedFaculties.some((af) => af.id === f.id)
+          (f) =>
+            f.id !== teacher.id &&
+            !assignedFaculties.some((af) => af.id === f.id && af.subject_id === subjectId)
         );
         setUpdateCandidates(candidates);
       } catch {

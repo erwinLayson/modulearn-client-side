@@ -69,6 +69,23 @@ export interface StudentSubjectGradeSummary {
   final_grade: number | null;
 }
 
+export interface FinalizationRecord {
+  id: number;
+  period_id: number | null;
+  student_id: string;
+  student_name: string;
+  student_lrn: string | null;
+  final_grade: number | null;
+  finalized_at: string;
+  updated_at: string | null;
+  correction_reason: string | null;
+}
+
+export interface FinalizeResult {
+  message: string;
+  finalized_count: number;
+}
+
 export const gradebookApi = {
   // Grading Weights
   getWeights: (classId: string, subjectId: string) =>
@@ -96,6 +113,16 @@ export const gradebookApi = {
 
   upsertGrades: (gradeItemId: string, grades: { student_id: string; score: number }[]) =>
     apiClient.post<{ message: string }>(`/gradebook/grades/${gradeItemId}`, { grades }),
+
+  // Finalization
+  finalizeGrades: (payload: { class_id: string; subject_id: string; period_id: number | null }) =>
+    apiClient.post<{ data: FinalizeResult }>("/gradebook/finalize", payload),
+
+  getFinalizations: (classId: string, subjectId: string) =>
+    apiClient.get<{ data: FinalizationRecord[] }>("/gradebook/finalizations", { params: { class_id: classId, subject_id: subjectId } }),
+
+  correctFinalization: (id: number, payload: { final_grade: number | null; reason: string }) =>
+    apiClient.put<{ message: string }>(`/gradebook/finalizations/${id}`, payload),
 
   // Student APIs
   getStudentGrades: (classId: string, subjectId: string, periodId?: string) =>

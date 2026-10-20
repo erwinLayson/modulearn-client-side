@@ -240,7 +240,7 @@ export default function SchoolAdminDashboard() {
         </div>
       </div>
 
-      <div className="dash-columns" style={{ marginTop: "1.5rem" }}>
+      <div style={{ marginTop: "1.5rem" }}>
         <div className="dash-section">
           <h2 className="dash-section-title">Recent Classes</h2>
           {loading ? (

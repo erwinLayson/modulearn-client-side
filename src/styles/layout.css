@@ -15,12 +15,14 @@
   flex-direction: column;
   width: 16rem;
   height: 100vh;
+  max-height: 100vh;
   background: linear-gradient(180deg, var(--ml-primary), var(--ml-primary-deep));
   color: var(--ml-on-primary-soft);
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .sidebar-header {
+  flex-shrink: 0;
   padding: 1.5rem 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -55,10 +57,18 @@
 
 .sidebar-nav {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   padding: 1rem 0.75rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebar-link {
@@ -106,6 +116,7 @@
 }
 
 .sidebar-footer {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;

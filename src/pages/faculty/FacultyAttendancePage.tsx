@@ -93,8 +93,9 @@ export default function FacultyAttendancePage() {
         classApi.getAssignedClasses(user.id),
         user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
       ]);
-      const assignments = res.data.data || [];
-      setCurrentSchoolYear(syRes.data.data || null);
+      const currentSy = syRes.data.data || null;
+      setCurrentSchoolYear(currentSy);
+      const assignments = (res.data.data || []).filter((a: FacultyClassAssignment) => (currentSy ? a.school_year_id === currentSy.id : true));
       const periodParam = selectedPeriod ? Number(selectedPeriod) : undefined;
       const todayRes = await attendanceApi.getHistory({ date_from: today, date_to: today, limit: 200, ...(periodParam ? { period_id: periodParam } : {}) });
       const todayHistory: AttendanceHistoryItem[] = todayRes.data.data?.data || [];

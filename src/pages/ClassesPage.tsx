@@ -92,19 +92,22 @@ export default function ClassesPage({ role }: ClassesPageProps) {
           }
         }
         setStudentClassDetails(details);
+      } else if (isFaculty) {
+        const [assignedRes, syRes] = await Promise.all([
+          classApi.getAssignedClasses(user.id),
+          user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
+        ]);
+        const currentSy = syRes.data?.data ?? null;
+        const assignments = (assignedRes.data?.data || []).filter((a: FacultyClassAssignment) =>
+          currentSy ? a.school_year_id === currentSy.id : true
+        );
+        setAssignedClasses(assignments);
+        setClasses([]);
       } else {
         const schoolId = user.school_id ?? 0;
         const { data } = await classApi.getBySchoolId(schoolId);
         const allClasses = data.data || [];
-        if (isFaculty) {
-          setClasses(allClasses.filter((c: ClassListItem) => c.faculty_id === user.id));
-          try {
-            const assignedRes = await classApi.getAssignedClasses(user.id);
-            setAssignedClasses(assignedRes.data.data || []);
-          } catch { setAssignedClasses([]); }
-        } else {
-          setClasses(allClasses);
-        }
+        setClasses(allClasses);
       }
     } catch {
       setToast({ message: "Failed to load classes", type: "error" });
@@ -170,7 +173,7 @@ export default function ClassesPage({ role }: ClassesPageProps) {
           school_year_id: a.school_year_id,
           capacity: a.capacity, section: a.section, grade_level: a.grade_level,
           schedule: a.schedule, created_at: a.created_at,
-        }, advisory: false, subjects });
+        }, advisory: a.adviser_role, subjects });
       }
     }
     return Array.from(map.values());

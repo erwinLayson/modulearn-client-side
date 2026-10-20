@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory } from "../../api/gradebook";
+import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory, type FinalizationRecord } from "../../api/gradebook";
 import { schoolYearApi, type SchoolYear } from "../../api/school-years";
 import { resolveCurrentPeriodId } from "../../api/academicPeriods";
 import { useAuth } from "../../context/AuthContext";
+import { getApiErrorMessage } from "../../api/client";
 import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
@@ -75,6 +76,10 @@ export default function GradebookSubject() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [activeCell, setActiveCell] = useState<{ studentId: string; itemId: string } | null>(null);
 
+  const [finalizations, setFinalizations] = useState<FinalizationRecord[]>([]);
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+
   // Load current school year once (needed by the period selector)
   useEffect(() => {
     const schoolId = user?.school_id;
@@ -144,10 +149,17 @@ export default function GradebookSubject() {
         gradebookApi.getGrades(classId, subjectId, selectedPeriod),
       ]);
       setItems(itemsRes.data.data || []);
-      setGradeData(gradesRes.data.data);
+      const gData = gradesRes.data.data || {
+        class: { id: classId, name: "", section: null, grade_level: null },
+        subject: { id: subjectId },
+        weights: [],
+        items: itemsRes.data.data || [],
+        students: [],
+      };
+      setGradeData(gData);
       const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data.students) {
-        for (const gi of s.items) {
+      for (const s of gData.students || []) {
+        for (const gi of s.items || []) {
           const key = `${s.student_id}:${gi.id}`;
           initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
         }
@@ -155,12 +167,37 @@ export default function GradebookSubject() {
       setScores(initialScores);
     } catch {
       setToast({ message: "Failed to load gradebook data", type: "error" });
+      setGradeData(prev => prev || {
+        class: { id: classId, name: "", section: null, grade_level: null },
+        subject: { id: subjectId },
+        weights: [],
+        items: [],
+        students: [],
+      });
     } finally {
       setLoading(false);
     }
   }, [classId, subjectId, selectedPeriod, periodResolved]);
 
-  useEffect(() => { fetchSheet(); }, [fetchSheet]);
+  const loadFinalizations = useCallback(async () => {
+    if (!classId || !subjectId) return;
+    try {
+      const res = await gradebookApi.getFinalizations(classId, subjectId);
+      setFinalizations(res.data.data || []);
+    } catch {
+      setFinalizations([]);
+    }
+  }, [classId, subjectId]);
+
+  useEffect(() => {
+    fetchSheet();
+    loadFinalizations();
+  }, [fetchSheet, loadFinalizations]);
+
+  const selectedPeriodFinalized = useMemo(
+    () => finalizations.some(f => f.period_id !== null && String(f.period_id) === selectedPeriod),
+    [finalizations, selectedPeriod]
+  );
 
   const groupedItems = useMemo(() => {
     if (!gradeData) return {} as Record<GradeItemCategory, GradeSheetItem[]>;
@@ -248,8 +285,8 @@ export default function GradebookSubject() {
       const gradesRes = await gradebookApi.getGrades(classId, subjectId, periodParam);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data.students) {
-        for (const gi of s.items) {
+      for (const s of gradesRes.data.data?.students || []) {
+        for (const gi of s.items || []) {
           const key = `${s.student_id}:${gi.id}`;
           initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
         }
@@ -308,8 +345,8 @@ export default function GradebookSubject() {
       const gradesRes = await gradebookApi.getGrades(classId!, subjectId!, periodParam);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data.students) {
-        for (const gi of s.items) {
+      for (const s of gradesRes.data.data?.students || []) {
+        for (const gi of s.items || []) {
           const key = `${s.student_id}:${gi.id}`;
           initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
         }
@@ -395,8 +432,8 @@ export default function GradebookSubject() {
       const gradesRes = await gradebookApi.getGrades(classId!, subjectId!, selectedPeriod || undefined);
       setGradeData(gradesRes.data.data);
       const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data.students) {
-        for (const gi of s.items) {
+      for (const s of gradesRes.data.data?.students || []) {
+        for (const gi of s.items || []) {
           const key = `${s.student_id}:${gi.id}`;
           initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
         }
@@ -407,6 +444,25 @@ export default function GradebookSubject() {
       setToast({ message: msg, type: "error" });
     } finally {
       setScoresSaving(false);
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!classId || !subjectId || !selectedPeriod) return;
+    setFinalizing(true);
+    try {
+      const res = await gradebookApi.finalizeGrades({
+        class_id: classId,
+        subject_id: subjectId,
+        period_id: Number(selectedPeriod),
+      });
+      setToast({ message: res.data.data?.message || "Grades finalized successfully", type: "success" });
+      setShowFinalizeModal(false);
+      await Promise.all([loadFinalizations(), fetchSheet()]);
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err, "Failed to finalize grades"), type: "error" });
+    } finally {
+      setFinalizing(false);
     }
   };
 
@@ -542,7 +598,7 @@ export default function GradebookSubject() {
       )}
 
       {/* Grade Spreadsheet */}
-      {gradeData && gradeData.students.length > 0 && (
+      {selectedPeriod && gradeData && (
         <div className="mgmt-detail-panel">
           <div className="mgmt-detail-header">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
@@ -563,9 +619,18 @@ export default function GradebookSubject() {
                     {unsavedCount} unsaved change{unsavedCount !== 1 ? "s" : ""}
                   </span>
                 )}
+                {selectedPeriodFinalized && (
+                  <span className="gb-finalized-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Finalized
+                  </span>
+                )}
                 <button
                   className="mgmt-btn mgmt-btn--ghost"
                   onClick={openCreateItem}
+                  disabled={selectedPeriodFinalized}
                   style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
@@ -574,9 +639,17 @@ export default function GradebookSubject() {
                 <button
                   className="mgmt-btn mgmt-btn--primary"
                   onClick={handleSaveGrades}
-                  disabled={scoresSaving || !hasUnsavedChanges}
+                  disabled={scoresSaving || !hasUnsavedChanges || gradeData.students.length === 0 || selectedPeriodFinalized}
                 >
                   {scoresSaving ? "Saving..." : "Save All"}
+                </button>
+                <button
+                  className="mgmt-btn mgmt-btn--primary"
+                  onClick={() => setShowFinalizeModal(true)}
+                  disabled={selectedPeriodFinalized || gradeData.students.length === 0 || hasUnsavedChanges}
+                  title={hasUnsavedChanges ? "Save your grade changes first" : "Finalize grades for this period"}
+                >
+                  Finalize Grades
                 </button>
               </div>
             </div>
@@ -587,7 +660,7 @@ export default function GradebookSubject() {
               {/* Category group header row */}
               <thead>
                 <tr>
-                  <th  className="gb-spreadsheet__th gb-spreadsheet__th--sticky">
+                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sticky">
                     <div className="gb-spreadsheet__student-header">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -596,12 +669,12 @@ export default function GradebookSubject() {
                       Student
                     </div>
                   </th>
-                  {CATEGORY_ORDER.filter(cat => cat !== "attendance" && groupedItems[cat as GradeItemCategory]?.length).map(cat => {
+                  {CATEGORY_ORDER.filter(cat => cat !== "attendance").map(cat => {
                     const catItems = groupedItems[cat as GradeItemCategory] || [];
                     return (
                       <th
                         key={cat}
-                        colSpan={catItems.length + 1}
+                        colSpan={catItems.length > 0 ? catItems.length + 1 : 1}
                         className={`gb-spreadsheet__th gb-spreadsheet__th--category gb-spreadsheet__th--category-${cat}`}
                       >
                         <span className="gb-spreadsheet__cat-label">
@@ -611,11 +684,9 @@ export default function GradebookSubject() {
                       </th>
                     );
                   })}
-                  {gradeData.items.length > 0 && (
-                    <th className="gb-spreadsheet__th gb-spreadsheet__th--total-header">
-                      TOTAL
-                    </th>
-                  )}
+                  <th className="gb-spreadsheet__th gb-spreadsheet__th--total-header">
+                    TOTAL
+                  </th>
                   <th rowSpan={2} className="gb-spreadsheet__th gb-spreadsheet__th--attendance-header">
                     ATTENDANCE
                   </th>
@@ -628,8 +699,20 @@ export default function GradebookSubject() {
                 </tr>
                 <tr>
                   <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--sticky" />
-                  {CATEGORY_ORDER.filter(cat => cat !== "attendance" && groupedItems[cat as GradeItemCategory]?.length).map(cat =>
-                    (groupedItems[cat as GradeItemCategory] || []).map(item => (
+                  {CATEGORY_ORDER.filter(cat => cat !== "attendance").map(cat => {
+                    const catItems = groupedItems[cat as GradeItemCategory] || [];
+                    if (catItems.length === 0) {
+                      return (
+                        <th
+                          key={`${cat}-empty`}
+                          className={`gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--item gb-spreadsheet__th--item-${cat}`}
+                          style={{ fontStyle: "italic", color: "var(--ml-text-muted)", fontSize: "0.6875rem", fontWeight: 400 }}
+                        >
+                          No items
+                        </th>
+                      );
+                    }
+                    return catItems.map(item => (
                       <th key={item.id} className={`gb-spreadsheet__th gb-spreadsheet__th--item gb-spreadsheet__th--item-${cat}`}>
                         <div className="gb-spreadsheet__item-header">
                           <span className="gb-spreadsheet__item-title">{item.title}</span>
@@ -650,123 +733,152 @@ export default function GradebookSubject() {
                       <th key={`${cat}-total`} className={`gb-spreadsheet__th gb-spreadsheet__th--subtotal gb-spreadsheet__th--subtotal-${cat}`}>
                         Sum
                       </th>
-                    )
-                  )}
-                  {gradeData.items.length > 0 && (
-                    <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--total-header">
-                      Earned/Possible
-                    </th>
-                  )}
-                  
+                    );
+                  })}
+                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--total-header">
+                    Earned/Possible
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
-                {gradeData.students.map(s => {
-                  const enriched = enrichedStudents.find(e => e.student_id === s.student_id);
-                  const totalEarned = enriched ? Object.values(enriched.categories).reduce((sum, c) => sum + Number(c.earned), 0) : 0;
-                  const totalPossible = enriched ? Object.values(enriched.categories).reduce((sum, c) => sum + Number(c.possible), 0) : 0;
-                  const finalGrade = enriched?.final_grade;
-                  const attendanceRate = enriched?.attendance_rate ?? 0;
-                  const remarks = finalGrade !== null && finalGrade !== undefined ? (finalGrade >= PASS_THRESHOLD ? "Passed" : "Failed") : "—";
+                {gradeData.students.length === 0 ? (
+                  <tr className="gb-spreadsheet__row">
+                    <td
+                      colSpan={
+                        1 + // Student
+                        CATEGORY_ORDER.filter(cat => cat !== "attendance").reduce((acc, cat) => acc + (groupedItems[cat as GradeItemCategory]?.length ? (groupedItems[cat as GradeItemCategory]?.length || 0) + 1 : 1), 0) +
+                        1 + // Total
+                        1 + // Attendance
+                        1 + // Final Grade
+                        1   // Remarks
+                      }
+                      style={{
+                        textAlign: "center",
+                        padding: "3rem 1.5rem",
+                        color: "var(--ml-text-muted)",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      No enrolled students found in this class. You can still add assessment items using <strong>Add Item</strong> above.
+                    </td>
+                  </tr>
+                ) : (
+                  gradeData.students.map(s => {
+                    const enriched = enrichedStudents.find(e => e.student_id === s.student_id);
+                    const totalEarned = enriched ? Object.values(enriched.categories).reduce((sum, c) => sum + Number(c.earned), 0) : 0;
+                    const totalPossible = enriched ? Object.values(enriched.categories).reduce((sum, c) => sum + Number(c.possible), 0) : 0;
+                    const finalGrade = enriched?.final_grade;
+                    const attendanceRate = enriched?.attendance_rate ?? 0;
+                    const remarks = finalGrade !== null && finalGrade !== undefined ? (finalGrade >= PASS_THRESHOLD ? "Passed" : "Failed") : "—";
 
-                  return (
-                    <tr key={s.student_id} className="gb-spreadsheet__row">
-                      <td className="gb-spreadsheet__td gb-spreadsheet__td--sticky">
-                        <div className="gb-spreadsheet__student-cell">
-                          <span className="gb-spreadsheet__student-name">{s.student_name}</span>
-                          {s.lrn && <span className="gb-spreadsheet__student-lrn">{s.lrn}</span>}
-                        </div>
-                      </td>
+                    return (
+                      <tr key={s.student_id} className="gb-spreadsheet__row">
+                        <td className="gb-spreadsheet__td gb-spreadsheet__td--sticky">
+                          <div className="gb-spreadsheet__student-cell">
+                            <span className="gb-spreadsheet__student-name">{s.student_name}</span>
+                            {s.lrn && <span className="gb-spreadsheet__student-lrn">{s.lrn}</span>}
+                          </div>
+                        </td>
 
-                      {CATEGORY_ORDER.filter(cat => cat !== "attendance" && groupedItems[cat as GradeItemCategory]?.length).map(cat => {
-                        const catItems = groupedItems[cat as GradeItemCategory] || [];
-                        const catEarned = enriched?.categories[cat]?.earned ?? 0;
-                        const catPossible = enriched?.categories[cat]?.possible ?? 0;
-                        return (
-                          <React.Fragment key={cat}>
-                            {catItems.map(item => {
-                              const key = `${s.student_id}:${item.id}`;
-                              const val = scores[key] ?? "";
-                              return (
-                                <td key={item.id} className={`gb-spreadsheet__td gb-spreadsheet__td--item gb-spreadsheet__td--item-${cat}`}>
-                                  <input
-                                    type="number"
-                                    className={`gb-spreadsheet__score-input${activeCell?.studentId === s.student_id && activeCell?.itemId === item.id ? " gb-spreadsheet__score-input--active" : ""}`}
-                                    value={val}
-                                    onChange={(e) => handleScoreChange(s.student_id, item.id, e.target.value)}
-                                    onFocus={() => setActiveCell({ studentId: s.student_id, itemId: item.id })}
-                                    onBlur={() => setActiveCell(null)}
-                                    min={0}
-                                    max={item.max_score}
-                                    step="0.5"
-                                    placeholder="—"
-                                  />
-                                </td>
-                              );
-                            })}
-                            <td className={`gb-spreadsheet__td gb-spreadsheet__td--subtotal gb-spreadsheet__td--subtotal-${cat}`}>
-                              <span className="gb-spreadsheet__subtotal-text">
-                                {catPossible > 0 ? `${Number(catEarned).toFixed(2)} / ${Number(catPossible).toFixed(2)}` : "—"}
-                              </span>
-                            </td>
-                          </React.Fragment>
-                        );
-                      })}
+                        {CATEGORY_ORDER.filter(cat => cat !== "attendance").map(cat => {
+                          const catItems = groupedItems[cat as GradeItemCategory] || [];
+                          if (catItems.length === 0) {
+                            return (
+                              <td
+                                key={`${cat}-empty`}
+                                className={`gb-spreadsheet__td gb-spreadsheet__td--item gb-spreadsheet__td--item-${cat}`}
+                                style={{ textAlign: "center", color: "var(--ml-text-muted)", fontSize: "0.8125rem" }}
+                              >
+                                —
+                              </td>
+                            );
+                          }
+                          const catEarned = enriched?.categories[cat]?.earned ?? 0;
+                          const catPossible = enriched?.categories[cat]?.possible ?? 0;
+                          return (
+                            <React.Fragment key={cat}>
+                              {catItems.map(item => {
+                                const key = `${s.student_id}:${item.id}`;
+                                const val = scores[key] ?? "";
+                                return (
+                                  <td key={item.id} className={`gb-spreadsheet__td gb-spreadsheet__td--item gb-spreadsheet__td--item-${cat}`}>
+                                    <input
+                                      type="number"
+                                      className={`gb-spreadsheet__score-input${activeCell?.studentId === s.student_id && activeCell?.itemId === item.id ? " gb-spreadsheet__score-input--active" : ""}`}
+                                      value={val}
+                                      onChange={(e) => handleScoreChange(s.student_id, item.id, e.target.value)}
+                                      onFocus={() => setActiveCell({ studentId: s.student_id, itemId: item.id })}
+                                      onBlur={() => setActiveCell(null)}
+                                      min={0}
+                                      max={item.max_score}
+                                      step="0.5"
+                                      placeholder="—"
+                                    />
+                                  </td>
+                                );
+                              })}
+                              <td className={`gb-spreadsheet__td gb-spreadsheet__td--subtotal gb-spreadsheet__td--subtotal-${cat}`}>
+                                <span className="gb-spreadsheet__subtotal-text">
+                                  {catPossible > 0 ? `${Number(catEarned).toFixed(2)} / ${Number(catPossible).toFixed(2)}` : "—"}
+                                </span>
+                              </td>
+                            </React.Fragment>
+                          );
+                        })}
 
-                      {gradeData.items.length > 0 && (
                         <td className="gb-spreadsheet__td gb-spreadsheet__td--total">
                           <span className="gb-spreadsheet__total-text">
                             {totalPossible > 0 ? `${Number(totalEarned).toFixed(2)} / ${Number(totalPossible).toFixed(2)}` : "—"}
                           </span>
                         </td>
-                      )}
 
-                      <td className="gb-spreadsheet__td gb-spreadsheet__td--attendance">
-                        <div className="gb-spreadsheet__attendance-cell">
-                          <span className="gb-spreadsheet__attendance-text">{attendanceRate}%</span>
-                          <div className="gb-spreadsheet__attendance-bar">
-                            <div
-                              className="gb-spreadsheet__attendance-fill"
-                              style={{
-                                width: `${attendanceRate}%`,
-                                background: attendanceRate >= 75 ? COLORS.present : attendanceRate >= 60 ? COLORS.warning : COLORS.error,
-                              }}
-                            />
+                        <td className="gb-spreadsheet__td gb-spreadsheet__td--attendance">
+                          <div className="gb-spreadsheet__attendance-cell">
+                            <span className="gb-spreadsheet__attendance-text">{attendanceRate}%</span>
+                            <div className="gb-spreadsheet__attendance-bar">
+                              <div
+                                className="gb-spreadsheet__attendance-fill"
+                                style={{
+                                  width: `${attendanceRate}%`,
+                                  background: attendanceRate >= 75 ? COLORS.present : attendanceRate >= 60 ? COLORS.warning : COLORS.error,
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="gb-spreadsheet__td gb-spreadsheet__td--final">
-                        <span
-                          className={`gb-spreadsheet__final-text ${
-                            finalGrade !== null && finalGrade !== undefined
-                              ? finalGrade >= PASS_THRESHOLD
-                                ? "gb-spreadsheet__final-text--pass"
-                                : "gb-spreadsheet__final-text--fail"
-                              : ""
-                          }`}
-                        >
-                          {finalGrade !== null && finalGrade !== undefined ? finalGrade.toFixed(2) : "—"}
-                        </span>
-                      </td>
+                        <td className="gb-spreadsheet__td gb-spreadsheet__td--final">
+                          <span
+                            className={`gb-spreadsheet__final-text ${
+                              finalGrade !== null && finalGrade !== undefined
+                                ? finalGrade >= PASS_THRESHOLD
+                                  ? "gb-spreadsheet__final-text--pass"
+                                  : "gb-spreadsheet__final-text--fail"
+                                : ""
+                            }`}
+                          >
+                            {finalGrade !== null && finalGrade !== undefined ? finalGrade.toFixed(2) : "—"}
+                          </span>
+                        </td>
 
-                      <td className="gb-spreadsheet__td gb-spreadsheet__td--remarks">
-                        <span
-                          className={`gb-spreadsheet__remarks-badge ${
-                            remarks === "Passed"
-                              ? "gb-spreadsheet__remarks-badge--pass"
-                              : remarks === "Failed"
-                              ? "gb-spreadsheet__remarks-badge--fail"
-                              : ""
-                          }`}
-                        >
-                          {remarks}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <td className="gb-spreadsheet__td gb-spreadsheet__td--remarks">
+                          <span
+                            className={`gb-spreadsheet__remarks-badge ${
+                              remarks === "Passed"
+                                ? "gb-spreadsheet__remarks-badge--pass"
+                                : remarks === "Failed"
+                                ? "gb-spreadsheet__remarks-badge--fail"
+                                : ""
+                            }`}
+                          >
+                            {remarks}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -894,6 +1006,37 @@ export default function GradebookSubject() {
                 onClick={() => handleDeleteItem(deleteConfirmId)}
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finalize Grades Confirmation Modal */}
+      {showFinalizeModal && (
+        <div className="mgmt-modal-overlay" onClick={() => setShowFinalizeModal(false)}>
+          <div className="mgmt-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "26rem" }}>
+            <div className="mgmt-modal-header">
+              <h3 className="mgmt-modal-title">Finalize Grades</h3>
+              <button className="mgmt-modal-close" onClick={() => setShowFinalizeModal(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div style={{ padding: "1.5rem" }}>
+              <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--ml-text)", lineHeight: 1.6 }}>
+                Finalize grades for the selected academic period? This freezes the computed final grades for{" "}
+                <strong>{gradeData?.students.length ?? 0} student{gradeData?.students.length !== 1 ? "s" : ""}</strong>.
+              </p>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.8125rem", color: "var(--ml-text-muted)" }}>
+                Once finalized, grade items, scores, and grading weights for this period can no longer be changed. Only a school admin can correct a finalized grade.
+              </p>
+            </div>
+            <div className="mgmt-modal-actions" style={{ padding: "1rem 1.5rem" }}>
+              <button className="mgmt-btn mgmt-btn--ghost" onClick={() => setShowFinalizeModal(false)}>Cancel</button>
+              <button className="mgmt-btn mgmt-btn--primary" onClick={handleFinalize} disabled={finalizing}>
+                {finalizing ? "Finalizing..." : "Finalize Grades"}
               </button>
             </div>
           </div>

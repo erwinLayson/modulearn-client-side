@@ -32,8 +32,10 @@ export default function GradebookPage() {
         classApi.getAssignedClasses(user.id),
         user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
       ]);
-      setAssignments(classesRes.data.data || []);
-      setCurrentSchoolYear(syRes.data.data || null);
+      const currentSy = syRes.data.data || null;
+      const assignments = (classesRes.data.data || []).filter((a: FacultyClassAssignment) => (currentSy ? a.school_year_id === currentSy.id : true));
+      setAssignments(assignments);
+      setCurrentSchoolYear(currentSy);
     } catch {
       // silently fail
     } finally {

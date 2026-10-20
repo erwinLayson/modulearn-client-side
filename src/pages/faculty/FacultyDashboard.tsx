@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
 import { attendanceApi, type FacultyDashboardSummary } from "../../api/classes";
+import { schoolYearApi } from "../../api/school-years";
 import apiClient from "../../api/client";
 import { COLORS } from "../../constant/colors";
 
@@ -22,6 +23,7 @@ interface ClassData {
   class_name: string;
   module_id: string;
   faculty_id: string;
+  school_year_id: number;
 }
 
 export default function FacultyDashboard() {
@@ -40,13 +42,16 @@ export default function FacultyDashboard() {
 
     const fetchData = async () => {
       try {
-        const [classesRes, modulesRes, studentsRes] = await Promise.all([
-          apiClient.get<{ data: ClassData[] }>(`/classes/faculty/${user.id}`),
-          apiClient.get<{ data: ModuleData[] }>(`/modules/school/${user.school_id}`),
-          apiClient.get<{ data: StudentData[] }>(`/students/school/${user.school_id}`),
-        ]);
-        setClasses(classesRes.data.data || []);
-        setModules(modulesRes.data.data || []);
+     const [classesRes, modulesRes, studentsRes, syRes] = await Promise.all([
+       apiClient.get<{ data: ClassData[] }>(`/classes/faculty/${user.id}`),
+       apiClient.get<{ data: ModuleData[] }>(`/modules/school/${user.school_id}`),
+       apiClient.get<{ data: StudentData[] }>(`/students/school/${user.school_id}`),
+       user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
+     ]);
+     const currentSy = syRes.data.data;
+     const allClasses = classesRes.data.data || [];
+     setClasses(currentSy ? allClasses.filter((c: ClassData) => c.school_year_id === currentSy.id) : allClasses);
+     setModules(modulesRes.data.data || []);
         setStudents(studentsRes.data.data || []);
       } catch {
         // silently fail

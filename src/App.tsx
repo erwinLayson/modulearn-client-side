@@ -22,6 +22,7 @@ import ManageSubjectsAdmin from "./pages/admin/ManageSubjects";
 import ManageSubjects from "./pages/school_admin/ManageSubjects";
 import ClassesPage from "./pages/ClassesPage";
 import AttendanceReport from "./pages/school_admin/AttendanceReport";
+import FinalizationsPage from "./pages/school_admin/FinalizationsPage";
 import StudentAttendancePage from "./pages/student/StudentAttendancePage";
 import StudentClassPage from "./pages/student/StudentClassPage";
 import GradebookPage from "./pages/faculty/GradebookPage";
@@ -163,6 +164,19 @@ export default function App() {
                     </FeatureGate>
                   }
                 />
+                <Route
+                  path="finalizations"
+                  element={<ProtectedRoute allowedRoles={["school_admin"]} />}
+                >
+                  <Route
+                    index
+                    element={
+                      <FeatureGate feature="gradebook">
+                        <FinalizationsPage />
+                      </FeatureGate>
+                    }
+                  />
+                </Route>
                 <Route path="reports" element={<PlaceholderPage />} />
                 <Route path="settings" element={<SettingsRoute />} />
                 <Route

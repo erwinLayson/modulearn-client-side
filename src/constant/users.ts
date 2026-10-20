@@ -34,6 +34,7 @@ export const ROLE_SIDEBAR: Record<UserRole, NavItem[]> = {
     { label: "Enrollments", path: "/dashboard/enrollments", icon: "classes", feature: "enrollments" },
     { label: "Modules", path: "/dashboard/modules", icon: "modules" },
     { label: "Subjects", path: "/dashboard/subjects", icon: "modules" },
+    { label: "Finalizations", path: "/dashboard/finalizations", icon: "grades", feature: "gradebook" },
     { label: "Reports", path: "/dashboard/reports", icon: "reports" },
     { label: "Settings", path: "/dashboard/settings", icon: "settings" },
   ],
