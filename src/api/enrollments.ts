@@ -9,6 +9,9 @@ export interface EnrollmentSubject {
 export interface EnrollmentListItem {
   id: string;
   student_id: string;
+  student_first_name?: string;
+  student_middle_name?: string;
+  student_last_name?: string;
   student_name: string;
   student_email: string;
   lrn: string | null;

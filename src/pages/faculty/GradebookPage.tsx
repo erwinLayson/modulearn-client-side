@@ -120,7 +120,9 @@ export default function GradebookPage() {
                         <span
                           key={subject.id}
                           className="dash-badge dash-badge--completed"
-                          style={{ fontSize: "0.7rem", cursor: "pointer" }}
+                          style={{ fontSize: "0.7rem", cursor: "pointer", transition: "transform 0.15s ease, box-shadow 0.15s ease" }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLSpanElement).style.transform = "translateY(-1px)"; (e.currentTarget as HTMLSpanElement).style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLSpanElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLSpanElement).style.boxShadow = "none"; }}
                           onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/gradebook/${assignment.id}/${subject.id}${selectedPeriod ? `?period_id=${selectedPeriod}` : ""}`); }}
                         >
                           {subject.name}

@@ -54,6 +54,7 @@ export default function ClassesPage({ role }: ClassesPageProps) {
 
   const [selectedClass, setSelectedClass] = useState<ClassListItem | null>(null);
   const [classEnrollments, setClassEnrollments] = useState<EnrollmentListItem[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -99,7 +100,7 @@ export default function ClassesPage({ role }: ClassesPageProps) {
         ]);
         const currentSy = syRes.data?.data ?? null;
         const assignments = (assignedRes.data?.data || []).filter((a: FacultyClassAssignment) =>
-          currentSy ? a.school_year_id === currentSy.id : true
+          (currentSy ? a.school_year_id === currentSy.id : true) && a.adviser_role
         );
         setAssignedClasses(assignments);
         setClasses([]);
@@ -117,6 +118,17 @@ export default function ClassesPage({ role }: ClassesPageProps) {
   }, [user, isFaculty, isStudent]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (!isFaculty || selectedClass || assignedClasses.length === 0) return;
+    const a = assignedClasses[0];
+    setSelectedClass({
+      id: a.id, class_name: a.class_name, module_id: "", module_title: "",
+      faculty_id: a.faculty_id, faculty_name: a.faculty_name, school_id: a.school_id,
+      school_year_id: a.school_year_id, capacity: a.capacity, section: a.section,
+      grade_level: a.grade_level, schedule: a.schedule, created_at: a.created_at,
+    } as ClassListItem);
+  }, [isFaculty, assignedClasses, selectedClass]);
 
   useEffect(() => {
     if (!selectedClass || !user) return;
@@ -142,11 +154,6 @@ export default function ClassesPage({ role }: ClassesPageProps) {
 
   const handleClassClick = useCallback((cls: ClassListItem) => {
     setSelectedClass(cls);
-  }, []);
-
-  const closeDetail = useCallback(() => {
-    setSelectedClass(null);
-    setClassEnrollments([]);
   }, []);
 
   // Faculty can print report cards only for students of their own advisory class.
@@ -181,6 +188,24 @@ export default function ClassesPage({ role }: ClassesPageProps) {
 
   if (!user) return null;
 
+  const formatStudentName = (e: EnrollmentListItem) => {
+    const last = (e.student_last_name || "").trim();
+    const first = (e.student_first_name || "").trim();
+    const middle = (e.student_middle_name || "").trim();
+    const formatted = [last, [first, middle].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    return formatted || e.student_name;
+  };
+
+  const filteredEnrollments = classEnrollments.filter((e) => {
+    const q = studentSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      formatStudentName(e).toLowerCase().includes(q) ||
+      e.student_email.toLowerCase().includes(q) ||
+      (e.lrn || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="mgmt-page">
       {toast && <Toast message={toast.message} type={toast.type} onClose={dismissToast} />}
@@ -193,13 +218,9 @@ export default function ClassesPage({ role }: ClassesPageProps) {
       </div>
 
       {isFaculty && selectedClass ? (
-        <div className="mgmt-detail-panel">
+        <>
           <div className="mgmt-detail-header">
             <div className="mgmt-detail-header-main" style={{ display: "flex", alignItems: "center", gap: "1rem", minWidth: 0 }}>
-              <button className="mgmt-btn mgmt-btn--ghost" onClick={closeDetail} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-                Back
-              </button>
               <div className="mgmt-card-icon" style={{ background: "rgba(13, 110, 253, 0.1)", color: COLORS.accent }}>
                 <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342" />
@@ -252,23 +273,35 @@ export default function ClassesPage({ role }: ClassesPageProps) {
             </div>
           </div>
 
-          <div style={{ padding: "1.25rem 1.5rem", minWidth: 0 }}>
-            <h3 style={{ margin: "0 0 1rem", fontSize: "0.875rem", fontWeight: 700, color: "var(--ml-text)" }}>
-              Enrolled Students ({classEnrollments.length})
-            </h3>
+           <div style={{ padding: "1.25rem 1.5rem", minWidth: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
+              <h3 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 700, color: "var(--ml-text)" }}>
+                Enrolled Students ({filteredEnrollments.length}{studentSearch.trim() ? ` of ${classEnrollments.length}` : ""})
+              </h3>
+              <input
+                type="text"
+                className="mgmt-input"
+                placeholder="Search students..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                style={{ maxWidth: "260px", fontSize: "0.8125rem" }}
+              />
+            </div>
 
             {detailLoading ? (
               <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading students...</div>
             ) : classEnrollments.length === 0 ? (
               <div className="mgmt-empty" style={{ padding: "2rem" }}>No students enrolled in this class.</div>
+            ) : filteredEnrollments.length === 0 ? (
+              <div className="mgmt-empty" style={{ padding: "2rem" }}>No students match your search.</div>
             ) : (
               <div className="mgmt-table-wrap">
                 <table className="mgmt-table mgmt-table--compact">
                   <thead><tr><th>Student Name</th><th>Email</th><th>Status</th><th>Enrolled</th>{showRecordActions && <th className="mgmt-table-actions">Report Card</th>}</tr></thead>
                   <tbody>
-                    {classEnrollments.map(e => (
+                    {filteredEnrollments.map(e => (
                       <tr key={e.id}>
-                        <td className="mgmt-table-bold">{e.student_name}</td>
+                        <td className="mgmt-table-bold">{formatStudentName(e)}</td>
                         <td>{e.student_email}</td>
                         <td><span className={`dash-badge dash-badge--${e.status}`}>{e.status.charAt(0).toUpperCase() + e.status.slice(1)}</span></td>
                         <td>{new Date(e.enrolled_at).toLocaleDateString()}</td>
@@ -292,7 +325,7 @@ export default function ClassesPage({ role }: ClassesPageProps) {
               </div>
             )}
           </div>
-        </div>
+        </>
       ) : (
         <>
           {loading ? <div className="mgmt-loading">Loading...</div>

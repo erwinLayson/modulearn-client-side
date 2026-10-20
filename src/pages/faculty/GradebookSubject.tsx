@@ -151,7 +151,7 @@ export default function GradebookSubject() {
       setItems(itemsRes.data.data || []);
       const gData = gradesRes.data.data || {
         class: { id: classId, name: "", section: null, grade_level: null },
-        subject: { id: subjectId },
+        subject: { id: subjectId, name: null },
         weights: [],
         items: itemsRes.data.data || [],
         students: [],
@@ -169,7 +169,7 @@ export default function GradebookSubject() {
       setToast({ message: "Failed to load gradebook data", type: "error" });
       setGradeData(prev => prev || {
         class: { id: classId, name: "", section: null, grade_level: null },
-        subject: { id: subjectId },
+        subject: { id: subjectId, name: null },
         weights: [],
         items: [],
         students: [],
@@ -512,7 +512,11 @@ export default function GradebookSubject() {
           </button>
           <div>
             <h1 className="mgmt-title">Gradebook</h1>
-            <p className="mgmt-subtitle">Manage grades, weights, and items for this subject.</p>
+            <p className="mgmt-subtitle">
+              {gradeData
+                ? `${gradeData.class.name}${gradeData.class.section ? ` · Section ${gradeData.class.section}` : ""}${gradeData.class.grade_level ? ` · ${gradeData.class.grade_level}` : ""} — ${gradeData.subject.name || "Subject"}`
+                : "Manage grades, weights, and items for this subject."}
+            </p>
           </div>
         </div>
         {user?.school_id && currentSchoolYear && (
@@ -674,7 +678,7 @@ export default function GradebookSubject() {
                     return (
                       <th
                         key={cat}
-                        colSpan={catItems.length > 0 ? catItems.length + 1 : 1}
+                        colSpan={catItems.length > 0 ? catItems.length : 1}
                         className={`gb-spreadsheet__th gb-spreadsheet__th--category gb-spreadsheet__th--category-${cat}`}
                       >
                         <span className="gb-spreadsheet__cat-label">
@@ -684,9 +688,6 @@ export default function GradebookSubject() {
                       </th>
                     );
                   })}
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--total-header">
-                    TOTAL
-                  </th>
                   <th rowSpan={2} className="gb-spreadsheet__th gb-spreadsheet__th--attendance-header">
                     ATTENDANCE
                   </th>
@@ -729,15 +730,8 @@ export default function GradebookSubject() {
                           </div>
                         </div>
                       </th>
-                    )).concat(
-                      <th key={`${cat}-total`} className={`gb-spreadsheet__th gb-spreadsheet__th--subtotal gb-spreadsheet__th--subtotal-${cat}`}>
-                        Sum
-                      </th>
-                    );
+                    ));
                   })}
-                  <th className="gb-spreadsheet__th gb-spreadsheet__th--sub gb-spreadsheet__th--total-header">
-                    Earned/Possible
-                  </th>
                 </tr>
               </thead>
 
@@ -747,8 +741,7 @@ export default function GradebookSubject() {
                     <td
                       colSpan={
                         1 + // Student
-                        CATEGORY_ORDER.filter(cat => cat !== "attendance").reduce((acc, cat) => acc + (groupedItems[cat as GradeItemCategory]?.length ? (groupedItems[cat as GradeItemCategory]?.length || 0) + 1 : 1), 0) +
-                        1 + // Total
+                        CATEGORY_ORDER.filter(cat => cat !== "attendance").reduce((acc, cat) => acc + (groupedItems[cat as GradeItemCategory]?.length ? (groupedItems[cat as GradeItemCategory]?.length || 0) : 1), 0) +
                         1 + // Attendance
                         1 + // Final Grade
                         1   // Remarks
@@ -766,8 +759,6 @@ export default function GradebookSubject() {
                 ) : (
                   gradeData.students.map(s => {
                     const enriched = enrichedStudents.find(e => e.student_id === s.student_id);
-                    const totalEarned = enriched ? Object.values(enriched.categories).reduce((sum, c) => sum + Number(c.earned), 0) : 0;
-                    const totalPossible = enriched ? Object.values(enriched.categories).reduce((sum, c) => sum + Number(c.possible), 0) : 0;
                     const finalGrade = enriched?.final_grade;
                     const attendanceRate = enriched?.attendance_rate ?? 0;
                     const remarks = finalGrade !== null && finalGrade !== undefined ? (finalGrade >= PASS_THRESHOLD ? "Passed" : "Failed") : "—";
@@ -794,11 +785,9 @@ export default function GradebookSubject() {
                               </td>
                             );
                           }
-                          const catEarned = enriched?.categories[cat]?.earned ?? 0;
-                          const catPossible = enriched?.categories[cat]?.possible ?? 0;
-                          return (
-                            <React.Fragment key={cat}>
-                              {catItems.map(item => {
+                           return (
+                             <React.Fragment key={cat}>
+                               {catItems.map(item => {
                                 const key = `${s.student_id}:${item.id}`;
                                 const val = scores[key] ?? "";
                                 return (
@@ -817,23 +806,12 @@ export default function GradebookSubject() {
                                     />
                                   </td>
                                 );
-                              })}
-                              <td className={`gb-spreadsheet__td gb-spreadsheet__td--subtotal gb-spreadsheet__td--subtotal-${cat}`}>
-                                <span className="gb-spreadsheet__subtotal-text">
-                                  {catPossible > 0 ? `${Number(catEarned).toFixed(2)} / ${Number(catPossible).toFixed(2)}` : "—"}
-                                </span>
-                              </td>
-                            </React.Fragment>
-                          );
+                               })}
+                             </React.Fragment>
+                           );
                         })}
 
-                        <td className="gb-spreadsheet__td gb-spreadsheet__td--total">
-                          <span className="gb-spreadsheet__total-text">
-                            {totalPossible > 0 ? `${Number(totalEarned).toFixed(2)} / ${Number(totalPossible).toFixed(2)}` : "—"}
-                          </span>
-                        </td>
-
-                        <td className="gb-spreadsheet__td gb-spreadsheet__td--attendance">
+                         <td className="gb-spreadsheet__td gb-spreadsheet__td--attendance">
                           <div className="gb-spreadsheet__attendance-cell">
                             <span className="gb-spreadsheet__attendance-text">{attendanceRate}%</span>
                             <div className="gb-spreadsheet__attendance-bar">

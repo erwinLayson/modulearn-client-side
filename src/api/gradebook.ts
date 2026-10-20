@@ -47,7 +47,7 @@ export interface StudentGrade {
 
 export interface GradesForSubjectResponse {
   class: { id: string; name: string; section: string | null; grade_level: string | null };
-  subject: { id: string };
+  subject: { id: string; name: string | null };
   weights: { category: GradingCategory; weight: number }[];
   items: { id: string; category: GradeItemCategory; title: string; max_score: number; due_date: string | null; period_id: number | null }[];
   students: StudentGrade[];
