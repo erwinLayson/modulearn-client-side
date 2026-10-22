@@ -255,15 +255,39 @@
 
 .module-card {
   border: 1px solid var(--ml-border);
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   background: var(--ml-card, var(--ml-surface));
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   position: relative;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.module-card:focus-visible {
+  outline: 2px solid var(--ml-accent);
+  outline-offset: 2px;
+}
+
+/* Keep an open action menu above neighbouring cards. */
+.module-card--menu-open {
+  z-index: 10;
+}
+
+.module-results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -0.25rem 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--ml-text-muted);
+}
+
+.module-results-bar .mgmt-action {
+  padding: 0.25rem 0.5rem;
 }
 
 .module-card:hover {
@@ -276,6 +300,7 @@
   height: 4px;
   width: 100%;
   background: var(--ml-accent);
+  border-radius: 0.875rem 0.875rem 0 0;
 }
 
 .module-card-top--published {
@@ -389,6 +414,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--ml-border);
@@ -397,6 +423,7 @@
 .module-card-action-btns {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.35rem;
 }
 
@@ -408,6 +435,86 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.module-card-menu {
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.module-card-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--ml-border);
+  border-radius: 0.5rem;
+  background: var(--ml-surface);
+  color: var(--ml-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.module-card-menu-trigger:hover {
+  background: var(--ml-surface-alt);
+  color: var(--ml-text);
+}
+
+.module-card-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 30;
+  min-width: 10.5rem;
+  padding: 0.25rem;
+  background: var(--ml-surface);
+  border: 1px solid var(--ml-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.module-card-menu-item {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--ml-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.module-card-menu-item:hover:not(:disabled) {
+  background: var(--ml-surface-alt);
+  color: var(--ml-text);
+}
+
+.module-card-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.module-card-menu-item--danger {
+  color: var(--ml-error);
+}
+
+.module-card-menu-item--danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--ml-error);
+}
+
+@media (max-width: 640px) {
+  .module-card-action-btns {
+    display: none;
+  }
+
+  .module-card-menu {
+    display: block;
+  }
 }
 
 .module-status {
@@ -511,7 +618,7 @@
   border-radius: 0.875rem;
   padding: 1.5rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
   flex-wrap: wrap;
@@ -548,8 +655,22 @@
 .module-detail-hero-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   flex-wrap: wrap;
+}
+
+.module-detail-hero-actions .mgmt-btn {
+  height: 2.375rem;
+  min-height: 2.375rem;
+  padding: 0 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+}
+
+.module-detail-hero-actions .mgmt-btn svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .module-stats-grid {
@@ -914,6 +1035,13 @@
   border-top: 1px solid var(--ml-border);
 }
 
+/* Primary card action sits on the left; secondary actions stay on the right. */
+.module-card-primary-action {
+  margin-right: auto;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .module-file-dropzone {
   border: 2px dashed var(--ml-border);
   border-radius: 0.75rem;
@@ -1154,6 +1282,16 @@
 
 .mgmt-btn--danger:hover:not(:disabled) {
   filter: brightness(0.94);
+}
+
+.mgmt-btn--danger-ghost {
+  background: transparent;
+  color: var(--ml-error);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.mgmt-btn--danger-ghost:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .mgmt-modal--wide {

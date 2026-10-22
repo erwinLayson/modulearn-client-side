@@ -62,7 +62,16 @@ export default function MyModulesPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [subjectFilter, setSubjectFilter] = useState("");
 
+  const hasActiveFilters = query.trim().length > 0 || statusFilter !== "" || subjectFilter !== "";
+  const clearFilters = () => {
+    setQuery("");
+    setStatusFilter("");
+    setSubjectFilter("");
+    setLoading(true);
+  };
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
   const [detail, setDetail] = useState<TeacherModuleDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -149,6 +158,24 @@ export default function MyModulesPage() {
     const timer = setTimeout(fetchModules, 250);
     return () => clearTimeout(timer);
   }, [fetchModules]);
+
+  useEffect(() => {
+    if (!openCardMenuId) return;
+    const onMouseDown = (event: MouseEvent) => {
+      if (!(event.target as HTMLElement).closest(".module-card-menu")) {
+        setOpenCardMenuId(null);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenCardMenuId(null);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openCardMenuId]);
 
   const fetchDetail = useCallback(async (moduleId: string, quiet = false) => {
     if (!quiet) setDetailLoading(true);
@@ -741,36 +768,53 @@ export default function MyModulesPage() {
                       disabled={detail.module.status === "archived"}
                       title="Create activity in an assigned class"
                     >
-                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" strokeWidth={2.25} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                       </svg>
-                      Create Class Activity
+                      <span>Create Class Activity</span>
                     </button>
                   )}
                   <button
                     type="button"
-                    className={detail.assignments.length > 0 && detail.templates.length > 0 ? "mgmt-btn mgmt-btn--ghost" : "mgmt-btn mgmt-btn--primary"}
+                    className="mgmt-btn mgmt-btn--ghost"
                     onClick={() => openReuse(detail.module.id)}
                     disabled={detail.module.status === "archived"}
                   >
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                     </svg>
-                    Assign to Class
+                    <span>Assign to Class</span>
                   </button>
                   <button
                     type="button"
                     className="mgmt-btn mgmt-btn--ghost"
                     onClick={() => openEdit(detail.module)}
                   >
-                    Edit Module
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                    </svg>
+                    <span>Edit Module</span>
                   </button>
                   <button
                     type="button"
-                    className={`mgmt-btn ${detail.module.status === "archived" ? "mgmt-btn--ghost" : "mgmt-btn--danger"}`}
+                    className={`mgmt-btn ${detail.module.status === "archived" ? "mgmt-btn--ghost" : "mgmt-btn--danger-ghost"}`}
                     onClick={() => setArchiveTarget(detail.module)}
                   >
-                    {detail.module.status === "archived" ? "Restore" : "Archive"}
+                    {detail.module.status === "archived" ? (
+                      <>
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                        </svg>
+                        <span>Restore</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                        </svg>
+                        <span>Archive</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -785,12 +829,6 @@ export default function MyModulesPage() {
                   <span className="module-stat-card-label">Status</span>
                   <span className="module-stat-card-value">
                     {STATUS_LABEL[detail.module.status]}
-                  </span>
-                </div>
-                <div className="module-stat-card">
-                  <span className="module-stat-card-label">Subject</span>
-                  <span className="module-stat-card-value">
-                    {detail.module.subject || "Not assigned"}
                   </span>
                 </div>
                 <div className="module-stat-card">
@@ -907,16 +945,14 @@ export default function MyModulesPage() {
                               target="_blank"
                               rel="noreferrer"
                               download={lesson.file_name || undefined}
-                              className="mgmt-action mgmt-action--edit"
-                              style={{ fontWeight: 600, color: "var(--ml-accent)", textDecoration: "none" }}
+                              className="mgmt-action mgmt-action--edit module-card-primary-action"
                             >
                               Download
                             </a>
                           ) : (
                             <button
                               type="button"
-                              className="mgmt-action mgmt-action--edit"
-                              style={{ fontWeight: 600, color: "var(--ml-accent)" }}
+                              className="mgmt-action mgmt-action--edit module-card-primary-action"
                               onClick={() => openReadLesson(lesson)}
                             >
                               Read Lesson
@@ -997,8 +1033,7 @@ export default function MyModulesPage() {
                         <div className="module-template-card-actions">
                           <button
                             type="button"
-                            className="mgmt-action mgmt-action--edit"
-                            style={{ fontWeight: 600, color: "var(--ml-accent)" }}
+                            className="mgmt-action mgmt-action--edit module-card-primary-action"
                             onClick={() => openCreateActivity(undefined, template.id)}
                             disabled={!detail.assignments || detail.assignments.length === 0}
                             title={
@@ -1034,29 +1069,12 @@ export default function MyModulesPage() {
               <section className="module-detail-card">
                 <div className="module-detail-card-head">
                   <div>
-                    <h3 className="module-detail-card-title">Assigned Classrooms</h3>
+                    <h3 className="module-detail-card-title">
+                      Assigned Classrooms ({detail.assignments.length})
+                    </h3>
                     <p className="module-detail-card-subtitle">
                       Classrooms where this module is assigned.
                     </p>
-                  </div>
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    {detail.assignments.length > 0 && detail.templates.length > 0 && (
-                      <button
-                        type="button"
-                        className="mgmt-btn mgmt-btn--primary mgmt-btn--sm"
-                        onClick={() => openCreateActivity()}
-                      >
-                        + Create Activity in Class
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="mgmt-btn mgmt-btn--ghost mgmt-btn--sm"
-                      onClick={() => openReuse(detail.module.id)}
-                      disabled={detail.module.status === "archived"}
-                    >
-                      + Assign to Class
-                    </button>
                   </div>
                 </div>
 
@@ -1117,11 +1135,13 @@ export default function MyModulesPage() {
             <input
               className="mgmt-input"
               placeholder="Search modules..."
+              aria-label="Search modules"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             <select
               className="mgmt-input mgmt-select"
+              aria-label="Filter by status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -1132,6 +1152,7 @@ export default function MyModulesPage() {
             </select>
             <select
               className="mgmt-input mgmt-select"
+              aria-label="Filter by subject"
               value={subjectFilter}
               onChange={(e) => setSubjectFilter(e.target.value)}
             >
@@ -1142,24 +1163,45 @@ export default function MyModulesPage() {
             </select>
           </div>
 
+          {!loading && hasActiveFilters && modules.length > 0 && (
+            <div className="module-results-bar">
+              <span>
+                {modules.length} {modules.length === 1 ? "module" : "modules"} found
+              </span>
+              <button type="button" className="mgmt-action mgmt-action--edit" onClick={clearFilters}>
+                Clear filters
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="mgmt-loading">Loading modules...</div>
           ) : modules.length === 0 ? (
-            <div className="mgmt-empty">
-              <p style={{ margin: "0 0 1rem" }}>No modules found. Create your first reusable module.</p>
-              <button type="button" className="mgmt-btn mgmt-btn--primary" onClick={openCreate}>
-                + New Module
-              </button>
-            </div>
+            hasActiveFilters ? (
+              <div className="mgmt-empty">
+                <p style={{ margin: "0 0 1rem" }}>No modules match your filters.</p>
+                <button type="button" className="mgmt-btn mgmt-btn--ghost" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              </div>
+            ) : (
+              <div className="mgmt-empty">
+                <p style={{ margin: "0 0 1rem" }}>No modules found. Create your first reusable module.</p>
+                <button type="button" className="mgmt-btn mgmt-btn--primary" onClick={openCreate}>
+                  + New Module
+                </button>
+              </div>
+            )
           ) : (
             <div className="module-card-grid">
               {modules.map((module) => (
                 <article
                   key={module.id}
-                  className="module-card"
+                  className={`module-card ${openCardMenuId === module.id ? "module-card--menu-open" : ""}`}
                   onClick={() => setSelectedId(module.id)}
                   tabIndex={0}
                   role="button"
+                  aria-label={`Open module ${module.title}`}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -1211,7 +1253,7 @@ export default function MyModulesPage() {
                         </svg>
                         <span>{module.assignment_count ?? 0} {module.assignment_count === 1 ? "class" : "classes"}</span>
                       </div>
-                      <div className="module-stat-item" title="Date">
+                      <div className="module-stat-item" title="Last updated">
                         <svg width="15" height="15" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -1257,6 +1299,74 @@ export default function MyModulesPage() {
                       <span className="module-card-open-hint">
                         View details &rarr;
                       </span>
+                      <div
+                        className="module-card-menu"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setOpenCardMenuId(null);
+                            return;
+                          }
+                          // Keep Enter/Space from activating the card underneath.
+                          if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="module-card-menu-trigger"
+                          aria-label={`Actions for ${module.title}`}
+                          aria-haspopup="menu"
+                          aria-expanded={openCardMenuId === module.id}
+                          onClick={() =>
+                            setOpenCardMenuId(openCardMenuId === module.id ? null : module.id)
+                          }
+                        >
+                          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="5" cy="12" r="1.75" />
+                            <circle cx="12" cy="12" r="1.75" />
+                            <circle cx="19" cy="12" r="1.75" />
+                          </svg>
+                        </button>
+                        {openCardMenuId === module.id && (
+                          <div className="module-card-menu-panel" role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="module-card-menu-item"
+                              onClick={() => {
+                                setOpenCardMenuId(null);
+                                openEdit(module);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="module-card-menu-item"
+                              disabled={module.status === "archived"}
+                              title={module.status === "archived" ? "Restore the module before assigning it" : undefined}
+                              onClick={() => {
+                                setOpenCardMenuId(null);
+                                void openReuse(module.id);
+                              }}
+                            >
+                              Assign to class
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={`module-card-menu-item ${module.status === "archived" ? "" : "module-card-menu-item--danger"}`}
+                              onClick={() => {
+                                setOpenCardMenuId(null);
+                                setArchiveTarget(module);
+                              }}
+                            >
+                              {module.status === "archived" ? "Restore" : "Archive"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </article>
