@@ -19,6 +19,9 @@ export interface GradeItem {
   max_score: number;
   due_date: string | null;
   period_id: number | null;
+  instructions?: string | null;
+  class_module_id?: string | null;
+  module_template_id?: string | null;
   created_at: string;
 }
 
@@ -49,7 +52,7 @@ export interface GradesForSubjectResponse {
   class: { id: string; name: string; section: string | null; grade_level: string | null };
   subject: { id: string; name: string | null };
   weights: { category: GradingCategory; weight: number }[];
-  items: { id: string; category: GradeItemCategory; title: string; max_score: number; due_date: string | null; period_id: number | null }[];
+  items: { id: string; category: GradeItemCategory; title: string; max_score: number; due_date: string | null; period_id: number | null; instructions?: string | null; class_module_id?: string | null; module_template_id?: string | null }[];
   students: StudentGrade[];
 }
 

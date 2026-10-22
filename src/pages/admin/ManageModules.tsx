@@ -78,7 +78,7 @@ export default function ManageModules() {
     setEditing(m);
     setEditForm({
       title: m.title,
-      description: m.description,
+      description: m.description ?? "",
       subject: m.subject,
       subject_id: m.subject_id ?? undefined,
     });

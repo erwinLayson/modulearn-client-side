@@ -44,7 +44,7 @@ export default function FacultyDashboard() {
       try {
      const [classesRes, modulesRes, studentsRes, syRes] = await Promise.all([
        apiClient.get<{ data: ClassData[] }>(`/classes/faculty/${user.id}`),
-       apiClient.get<{ data: ModuleData[] }>(`/modules/school/${user.school_id}`),
+       apiClient.get<{ data: ModuleData[] }>(`/modules/mine`),
        apiClient.get<{ data: StudentData[] }>(`/students/school/${user.school_id}`),
        user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
      ]);
@@ -231,11 +231,11 @@ export default function FacultyDashboard() {
         </div>
 
         <div className="dash-section">
-          <h2 className="dash-section-title">Available Modules</h2>
+          <h2 className="dash-section-title">My Modules</h2>
           {loading ? (
             <div className="dash-loading">Loading...</div>
           ) : modules.length === 0 ? (
-            <div className="dash-empty"><p>No modules available.</p></div>
+            <div className="dash-empty"><p>No modules created yet.</p></div>
           ) : (
             <div className="dash-list">
               {modules.slice(0, 5).map((m) => (

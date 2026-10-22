@@ -716,7 +716,10 @@ export default function GradebookSubject() {
                     return catItems.map(item => (
                       <th key={item.id} className={`gb-spreadsheet__th gb-spreadsheet__th--item gb-spreadsheet__th--item-${cat}`}>
                         <div className="gb-spreadsheet__item-header">
-                          <span className="gb-spreadsheet__item-title">{item.title}</span>
+                          <span className="gb-spreadsheet__item-title" title={item.instructions || undefined}>{item.title}</span>
+                          {item.module_template_id && (
+                            <span className="gb-spreadsheet__module-badge" title={item.instructions || "Created from a module template"}>M</span>
+                          )}
                           <div className="gb-spreadsheet__item-meta">
                             <span className="gb-spreadsheet__item-max">/{item.max_score}</span>
                             <div className="gb-spreadsheet__item-actions">

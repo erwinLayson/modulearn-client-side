@@ -8,6 +8,7 @@ import { schoolYearApi } from "../api/school-years";
 import ActionIcon from "../components/ActionIcon";
 import Tooltip from "../components/Tooltip";
 import Toast from "../components/Toast";
+import ClassModulesPanel from "../components/ClassModulesPanel";
 import { COLORS } from "../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
@@ -271,6 +272,14 @@ export default function ClassesPage({ role }: ClassesPageProps) {
                 <p style={{ margin: "0.25rem 0 0", color: "var(--ml-text)", fontSize: "0.875rem" }}>{formatSchedule(selectedClass.schedule)}</p>
               </div>
             </div>
+          </div>
+
+          <div style={{ padding: "0 1.5rem", borderBottom: "1px solid var(--ml-border)" }}>
+            <ClassModulesPanel
+              classId={selectedClass.id}
+              schoolYearId={selectedClass.school_year_id}
+              schoolId={selectedClass.school_id || user?.school_id || 0}
+            />
           </div>
 
            <div style={{ padding: "1.25rem 1.5rem", minWidth: 0 }}>

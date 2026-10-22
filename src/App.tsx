@@ -17,6 +17,7 @@ import ManageEnrollments from "./pages/school_admin/ManageEnrollments";
 import ManageUsers from "./pages/admin/ManageUsers";
 import ManageSchools from "./pages/admin/ManageSchools";
 import ManageModules from "./pages/admin/ManageModules";
+import MyModulesPage from "./pages/faculty/MyModulesPage";
 import ManageClassesAdmin from "./pages/admin/ManageClasses";
 import ManageSubjectsAdmin from "./pages/admin/ManageSubjects";
 import ManageSubjects from "./pages/school_admin/ManageSubjects";
@@ -55,6 +56,17 @@ const ClassesRoute = () => {
     return <StudentClassPage />;
   }
   return <ClassesPage role="faculty" />;
+};
+
+const ModulesRoute = () => {
+  const { user } = useAuth();
+  if (user?.role === "faculty") {
+    return <MyModulesPage />;
+  }
+  if (user?.role === "super_admin" || user?.role === "school_admin") {
+    return <ManageModules />;
+  }
+  return <Navigate to="/dashboard" replace />;
 };
 
 const SubjectsRoute = () => {
@@ -122,7 +134,7 @@ export default function App() {
                     </FeatureGate>
                   }
                 />
-                <Route path="modules" element={<ManageModules />} />
+                <Route path="modules" element={<ModulesRoute />} />
                 <Route path="subjects" element={<SubjectsRoute />} />
                 <Route
                   path="attendance-report"

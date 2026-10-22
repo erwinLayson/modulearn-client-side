@@ -30,6 +30,9 @@ export const subjectApi = {
   getAll: () =>
     apiClient.get<{ data: SubjectListItem[] }>("/subjects"),
 
+  getAssigned: () =>
+    apiClient.get<{ data: SubjectListItem[] }>("/subjects/assigned"),
+
   getBySchoolId: (schoolId: number) =>
     apiClient.get<{ data: SubjectListItem[] }>(`/subjects/school/${schoolId}`),
 
