@@ -32,6 +32,7 @@ export interface InstantiateActivityPayload {
   due_date?: string | null;
   title?: string;
   max_score?: number;
+  subject_id?: string;
 }
 
 export interface InstantiatedActivity {

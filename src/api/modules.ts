@@ -16,6 +16,7 @@ export interface ModuleListItem {
   lesson_content: string | null;
   template_count?: number;
   assignment_count?: number;
+  lesson_count?: number;
   created_at: string;
   updated_at?: string | null;
 }
@@ -67,10 +68,26 @@ export interface ModuleAssignmentSummary {
   assigned_at: string;
 }
 
+export interface ModuleLessonItem {
+  id: string;
+  module_id: string;
+  title: string;
+  lesson_type: "text" | "file";
+  content: string | null;
+  file_name: string | null;
+  file_path: string | null;
+  file_type: string | null;
+  file_size: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at?: string | null;
+}
+
 export interface TeacherModuleDetail {
   module: ModuleListItem;
   templates: ModuleActivityTemplate[];
   assignments: ModuleAssignmentSummary[];
+  lessons: ModuleLessonItem[];
 }
 
 export interface EligibleClassroom {
@@ -128,4 +145,20 @@ export const teachingModuleApi = {
 
   deleteTemplate: (moduleId: string, templateId: string) =>
     apiClient.delete<{ message: string }>(`/modules/mine/${moduleId}/templates/${templateId}`),
+
+  listLessons: (moduleId: string) =>
+    apiClient.get<{ data: ModuleLessonItem[] }>(`/modules/mine/${moduleId}/lessons`),
+
+  createLesson: (moduleId: string, payload: FormData) =>
+    apiClient.post<{ data: ModuleLessonItem }>(`/modules/mine/${moduleId}/lessons`, payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+
+  updateLesson: (moduleId: string, lessonId: string, payload: FormData) =>
+    apiClient.put<{ data: ModuleLessonItem }>(`/modules/mine/${moduleId}/lessons/${lessonId}`, payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+
+  deleteLesson: (moduleId: string, lessonId: string) =>
+    apiClient.delete<{ message: string }>(`/modules/mine/${moduleId}/lessons/${lessonId}`),
 };
