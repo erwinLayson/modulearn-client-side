@@ -59,6 +59,8 @@ interface ColumnDef {
   date: string;
   category: string;
   title: string;
+  isModuleActivity?: boolean;
+  instructions?: string | null;
 }
 
 interface SubjectRow {
@@ -140,24 +142,36 @@ export default function StudentGradebookPage() {
     for (const subj of summary) {
       for (const cat of CATEGORY_ORDER) {
         for (const item of subj[cat].items) {
-          const d = parseDate(item.due_date);
-          if (!d) continue;
+          const d = parseDate(item.due_date) || "No Due Date";
           const colKey = `${d}|${cat}|${item.title}`;
-          if (!seen.has(colKey)) {
+          const isModule = Boolean(item.module_template_id || item.class_module_id);
+          const existing = seen.get(colKey);
+          if (!existing) {
             seen.set(colKey, {
               key: colKey,
               date: d,
               category: cat,
               title: item.title,
+              isModuleActivity: isModule,
+              instructions: item.instructions || null,
             });
+          } else if (isModule && !existing.isModuleActivity) {
+            existing.isModuleActivity = true;
+            if (item.instructions) existing.instructions = item.instructions;
           }
         }
       }
     }
     return Array.from(seen.values()).sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      if (a.date !== b.date) {
+        if (a.date === "No Due Date") return 1;
+        if (b.date === "No Due Date") return -1;
+        return a.date.localeCompare(b.date);
+      }
       const catIdx = (c: string) => CATEGORY_ORDER.indexOf(c as typeof CATEGORY_ORDER[number]);
-      return catIdx(a.category) - catIdx(b.category);
+      const catDiff = catIdx(a.category) - catIdx(b.category);
+      if (catDiff !== 0) return catDiff;
+      return a.title.localeCompare(b.title);
     });
   }, [summary]);
 
@@ -187,8 +201,7 @@ export default function StudentGradebookPage() {
 
       for (const cat of CATEGORY_ORDER) {
         for (const item of subj[cat].items) {
-          const d = parseDate(item.due_date);
-          if (!d) continue;
+          const d = parseDate(item.due_date) || "No Due Date";
           const colKey = `${d}|${cat}|${item.title}`;
           scoresByCol.set(colKey, { score: item.score, max_score: item.max_score });
           if (item.score !== null) totalEarned += item.score;
@@ -208,26 +221,6 @@ export default function StudentGradebookPage() {
     }
     return result;
   }, [summary, subjectFilter]);
-
-  // Column totals (for footer row)
-  const colTotals = useMemo(() => {
-    return columns.map(col => {
-      let earned = 0;
-      let possible = 0;
-      for (const row of rows) {
-        const cell = row.scoresByCol.get(col.key);
-        if (cell) {
-          if (cell.score !== null) earned += cell.score;
-          possible += cell.max_score;
-        }
-      }
-      return { key: col.key, earned, possible };
-    });
-  }, [columns, rows]);
-
-  // Grand totals
-  const grandTotalEarned = rows.reduce((s, r) => s + r.totalEarned, 0);
-  const grandTotalPossible = rows.reduce((s, r) => s + r.totalPossible, 0);
 
   // Summary stats
   const totalEarned = summary.reduce((s, subj) => {
@@ -361,8 +354,12 @@ export default function StudentGradebookPage() {
                         style={{ textAlign: "center", borderBottom: "1px solid var(--ml-border)" }}
                       >
                         <div style={{ lineHeight: 1.3 }}>
-                          <div style={{ fontWeight: 700 }}>{formatDateShort(group.date)}</div>
-                          <div style={{ fontSize: "0.625rem", fontWeight: 400, color: "var(--ml-text-muted)" }}>{formatWeekday(group.date)}</div>
+                          <div style={{ fontWeight: 700 }}>
+                            {group.date === "No Due Date" ? "No Due Date" : formatDateShort(group.date)}
+                          </div>
+                          <div style={{ fontSize: "0.625rem", fontWeight: 400, color: "var(--ml-text-muted)" }}>
+                            {group.date === "No Due Date" ? "—" : formatWeekday(group.date)}
+                          </div>
                         </div>
                       </th>
                     ))}
@@ -373,40 +370,47 @@ export default function StudentGradebookPage() {
                     >
                       GRADE
                     </th>
-                    <th
-                      className="gb-spreadsheet__th gb-spreadsheet__th--total-header"
-                      rowSpan={2}
-                      style={{ minWidth: 80, textAlign: "center", verticalAlign: "bottom" }}
-                    >
-                      TOTAL
-                    </th>
                   </tr>
                   {/* Row 2: Category headers */}
                   <tr>
                     {dateGroups.map(group =>
                       group.cols.map(col => {
                         const colors = CATEGORY_COLORS[col.category] || { bg: "#F1F5F9", fg: "#334155" };
+                        const tooltip = col.isModuleActivity
+                          ? (col.instructions ? `[Module Activity] ${col.title} — ${col.instructions}` : `[Module Activity] ${col.title}`)
+                          : (col.instructions ? `${col.title} — ${col.instructions}` : col.title);
+
                         return (
                           <th
                             key={col.key}
                             className="gb-spreadsheet__th"
                             style={{ textAlign: "center", padding: "0.375rem 0.25rem" }}
                           >
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "1px 6px",
-                                borderRadius: "4px",
-                                fontSize: "0.625rem",
-                                fontWeight: 700,
-                                background: colors.bg,
-                                color: colors.fg,
-                                letterSpacing: "0.03em",
-                              }}
-                              title={col.title}
-                            >
-                              {CATEGORY_LABELS[col.category] || col.category}
-                            </span>
+                            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "1px 6px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.625rem",
+                                  fontWeight: 700,
+                                  background: colors.bg,
+                                  color: colors.fg,
+                                  letterSpacing: "0.03em",
+                                }}
+                                title={tooltip}
+                              >
+                                {CATEGORY_LABELS[col.category] || col.category}
+                              </span>
+                              {col.isModuleActivity && (
+                                <span
+                                  className="gb-spreadsheet__module-badge"
+                                  title={col.instructions || "Created from a module template"}
+                                >
+                                  M
+                                </span>
+                              )}
+                            </div>
                           </th>
                         );
                       })
@@ -450,41 +454,16 @@ export default function StudentGradebookPage() {
                           {row.finalGrade !== null ? `${row.finalGrade}%` : "—"}
                         </span>
                       </td>
-                      <td className="gb-spreadsheet__td gb-spreadsheet__td--total" style={{ textAlign: "center", fontWeight: 700 }}>
-                        <span className="gb-spreadsheet__total-text">
-                          {row.totalPossible > 0 ? `${row.totalEarned.toFixed(0)} / ${row.totalPossible.toFixed(0)}` : "—"}
-                        </span>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="gb-spreadsheet__row" style={{ fontWeight: 700, background: "var(--ml-surface-alt)" }}>
                     <td className="gb-spreadsheet__td gb-spreadsheet__td--sticky" style={{ fontWeight: 700, fontSize: "0.8125rem" }}>
-                      TOTAL
-                    </td>
-                    {colTotals.map(({ key, earned, possible }) => (
-                      <td key={key} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, fontSize: "0.75rem" }}>
-                        <span style={{ color: possible > 0 ? (earned / possible >= 0.75 ? COLORS.present : earned / possible >= 0.5 ? COLORS.warning : COLORS.error) : "var(--ml-text-muted)" }}>
-                          {possible > 0 ? `${earned}/${possible}` : "—"}
-                        </span>
-                      </td>
-                    ))}
-                    <td className="gb-spreadsheet__td gb-spreadsheet__td--total" style={{ textAlign: "center", fontWeight: 700, fontSize: "0.75rem" }}>
-                      <span style={{ color: "var(--ml-text-muted)" }}>—</span>
-                    </td>
-                    <td className="gb-spreadsheet__td gb-spreadsheet__td--total" style={{ textAlign: "center", fontWeight: 700 }}>
-                      <span className="gb-spreadsheet__total-text">
-                        {grandTotalPossible > 0 ? `${grandTotalEarned.toFixed(0)} / ${grandTotalPossible.toFixed(0)}` : "—"}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="gb-spreadsheet__row" style={{ fontWeight: 700, background: "var(--ml-surface-alt)", borderTop: "2px solid var(--ml-border)" }}>
-                    <td className="gb-spreadsheet__td gb-spreadsheet__td--sticky" style={{ fontWeight: 700, fontSize: "0.8125rem" }}>
                       AVERAGE
                     </td>
-                    {colTotals.map(({ key }) => (
-                      <td key={key} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, fontSize: "0.75rem" }}>
+                    {columns.map(col => (
+                      <td key={col.key} className="gb-spreadsheet__td" style={{ textAlign: "center", fontWeight: 700, fontSize: "0.75rem" }}>
                         <span style={{ color: "var(--ml-text-muted)" }}>—</span>
                       </td>
                     ))}
@@ -492,9 +471,6 @@ export default function StudentGradebookPage() {
                       <span style={{ color: averageGrade !== null ? getGradeColor(averageGrade) : "var(--ml-text-muted)", fontWeight: 800 }}>
                         {averageGrade !== null ? `${averageGrade}%` : "—"}
                       </span>
-                    </td>
-                    <td className="gb-spreadsheet__td gb-spreadsheet__td--total" style={{ textAlign: "center", fontWeight: 700 }}>
-                      <span className="gb-spreadsheet__total-text">—</span>
                     </td>
                   </tr>
                 </tfoot>

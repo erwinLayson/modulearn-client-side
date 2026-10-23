@@ -64,9 +64,9 @@ export interface StudentSubjectGradeSummary {
   section: string | null;
   grade_level: number | null;
   teacher_name: string;
-  activities: { items: { id: string; title: string; score: number | null; max_score: number; due_date: string | null }[]; average: number | null };
-  quizzes: { items: { id: string; title: string; score: number | null; max_score: number; due_date: string | null }[]; average: number | null };
-  exams: { items: { id: string; title: string; score: number | null; max_score: number; due_date: string | null }[]; average: number | null };
+  activities: { items: { id: string; title: string; score: number | null; max_score: number; due_date: string | null; instructions?: string | null; class_module_id?: string | null; module_template_id?: string | null }[]; average: number | null };
+  quizzes: { items: { id: string; title: string; score: number | null; max_score: number; due_date: string | null; instructions?: string | null; class_module_id?: string | null; module_template_id?: string | null }[]; average: number | null };
+  exams: { items: { id: string; title: string; score: number | null; max_score: number; due_date: string | null; instructions?: string | null; class_module_id?: string | null; module_template_id?: string | null }[]; average: number | null };
   attendance_rate: number;
   grading_weights: { category: GradingCategory; weight: number }[];
   final_grade: number | null;
