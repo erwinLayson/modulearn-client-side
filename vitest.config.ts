@@ -10,8 +10,7 @@ export default defineConfig({
         css: false,
         restoreMocks: true,
         clearMocks: true,
-        // Remove once the first client test file lands (phase 7 of the plan).
-        passWithNoTests: true,
+        testTimeout: 15_000,
         coverage: {
             provider: "v8",
             reportsDirectory: "coverage",

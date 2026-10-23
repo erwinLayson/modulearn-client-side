@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
@@ -169,5 +170,109 @@ describe("StudentGradebookPage", () => {
         expect(
             screen.getAllByText((_content, element) => element?.tagName.toLowerCase() === "span" && element?.textContent?.trim() === "—/30").length
         ).toBeGreaterThanOrEqual(1);
+    });
+
+    it("filters grade items by selected subject in the student grade item table", async () => {
+        const user = userEvent.setup();
+        mocks.getCurrentSchoolYear.mockResolvedValue({
+            data: { data: { id: 1, name: "2025-2026", is_current: 1 } },
+        });
+        mocks.resolveCurrentPeriodId.mockResolvedValue(1);
+
+        mocks.getStudentSummary.mockResolvedValue({
+            data: {
+                data: [
+                    {
+                        class_id: "class-1",
+                        class_name: "Grade 7 - Diamond",
+                        subject_id: "subject-english",
+                        subject_name: "English 7",
+                        teacher_name: "Ms. Santos",
+                        final_grade: 90,
+                        attendanceRate: 100,
+                        activities: {
+                            items: [
+                                {
+                                    id: "act-eng",
+                                    title: "Grammar Quiz",
+                                    category: "activities",
+                                    score: 20,
+                                    max_score: 20,
+                                    due_date: "2026-03-10",
+                                },
+                            ],
+                            average: 100,
+                        },
+                        quizzes: { items: [], average: null },
+                        exams: { items: [], average: null },
+                    },
+                    {
+                        class_id: "class-1",
+                        class_name: "Grade 7 - Diamond",
+                        subject_id: "subject-math",
+                        subject_name: "Mathematics 7",
+                        teacher_name: "Mr. Cruz",
+                        final_grade: 85,
+                        attendanceRate: 95,
+                        activities: {
+                            items: [
+                                {
+                                    id: "act-math",
+                                    title: "Algebra Problem Set",
+                                    category: "activities",
+                                    score: 25,
+                                    max_score: 30,
+                                    due_date: "2026-03-12",
+                                },
+                            ],
+                            average: 83.3,
+                        },
+                        quizzes: { items: [], average: null },
+                        exams: { items: [], average: null },
+                    },
+                ],
+            },
+        });
+
+        render(
+            <MemoryRouter initialEntries={["/student/grades?period_id=1"]}>
+                <StudentGradebookPage />
+            </MemoryRouter>
+        );
+
+        // Both subjects are initially visible in the table and filter
+        expect((await screen.findAllByText("English 7")).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("Mathematics 7").length).toBeGreaterThanOrEqual(1);
+
+        // Select Mathematics 7 via the filter dropdown
+        const subjectSelect = screen.getByDisplayValue("All Subjects");
+        await user.selectOptions(subjectSelect, "subject-math");
+
+        // English 7 teacher is filtered out, Mathematics 7 remains
+        expect(screen.queryByText("Ms. Santos")).not.toBeInTheDocument();
+        expect(screen.getByText("Mr. Cruz")).toBeInTheDocument();
+
+        // Clear filter
+        await user.click(screen.getByRole("button", { name: "Clear Filter" }));
+        expect(screen.getByText("Ms. Santos")).toBeInTheDocument();
+        expect(screen.getByText("Mr. Cruz")).toBeInTheDocument();
+    });
+
+    it("displays empty state when no grade records or activities are returned", async () => {
+        mocks.getCurrentSchoolYear.mockResolvedValue({
+            data: { data: { id: 1, name: "2025-2026", is_current: 1 } },
+        });
+        mocks.resolveCurrentPeriodId.mockResolvedValue(1);
+        mocks.getStudentSummary.mockResolvedValue({ data: { data: [] } });
+
+        render(
+            <MemoryRouter initialEntries={["/student/grades?period_id=1"]}>
+                <StudentGradebookPage />
+            </MemoryRouter>
+        );
+
+        const emptyTexts = await screen.findAllByText("No grade data available yet.");
+        expect(emptyTexts.length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText("Your grades will appear here once your teachers add them.")).toBeInTheDocument();
     });
 });
