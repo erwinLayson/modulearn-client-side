@@ -12,10 +12,9 @@ import type { FeatureKey } from "../../constant/features";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
+import type { ToastState } from "../../types";
 
 const SCHOOL_LEVELS = ["", "Elementary", "Junior High", "Senior High", "College"];
-
-type ToastState = { message: string; type: "success" | "error" } | null;
 
 export default function ManageSchools() {
   const { user } = useAuth();

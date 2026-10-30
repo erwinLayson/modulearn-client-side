@@ -28,8 +28,7 @@ import {
 } from "../../service/faculty/myModulesService";
 import Toast from "../../components/Toast";
 import PeriodSelector from "../../components/PeriodSelector";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function MyModulesPage() {
   const { user } = useAuth();

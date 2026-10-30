@@ -13,8 +13,7 @@ import {
 } from "../../service/school_admin/schoolSettingsService";
 import Toast from "../../components/Toast";
 import CredentialsSection from "../../components/CredentialsSection";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function SchoolSettings() {
   const { user } = useAuth();

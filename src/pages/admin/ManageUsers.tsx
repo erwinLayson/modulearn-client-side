@@ -21,9 +21,7 @@ import {
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
-type RoleFilter = UserRole | "all";
+import type { ToastState, RoleFilter } from "../../types";
 
 export default function ManageUsers() {
   const { user } = useAuth();

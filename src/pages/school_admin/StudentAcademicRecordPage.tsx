@@ -8,8 +8,7 @@ import {
 } from "../../service/school_admin/studentAcademicRecordService";
 import AcademicRecordSheet from "../../components/AcademicRecordSheet";
 import Toast from "../../components/Toast";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function StudentAcademicRecordPage() {
   const { studentId } = useParams<{ studentId: string }>();

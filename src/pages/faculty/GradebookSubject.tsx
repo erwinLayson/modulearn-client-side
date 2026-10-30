@@ -30,8 +30,7 @@ import { useAuth } from "../../context/AuthContext";
 import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function GradebookSubject() {
   const { classId, subjectId } = useParams<{ classId: string; subjectId: string }>();

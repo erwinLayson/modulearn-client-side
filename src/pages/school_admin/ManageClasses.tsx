@@ -29,8 +29,7 @@ import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 import SchedulePicker from "../../components/SchedulePicker";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function ManageClasses() {
   const { user } = useAuth();

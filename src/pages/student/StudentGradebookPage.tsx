@@ -13,6 +13,7 @@ import {
 } from "../../service/student/studentGradebookService";
 import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
+import type { ColumnDef, SubjectRow } from "../../types";
 
 const CATEGORY_LABELS: Record<string, string> = {
   activities: "ACT",
@@ -42,25 +43,6 @@ function formatWeekday(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", { weekday: "short" });
-}
-
-interface ColumnDef {
-  key: string;
-  date: string;
-  category: string;
-  title: string;
-  isModuleActivity?: boolean;
-  instructions?: string | null;
-}
-
-interface SubjectRow {
-  subject_id: string;
-  subject_name: string;
-  teacher_name: string;
-  scoresByCol: Map<string, { score: number | null; max_score: number }>;
-  totalEarned: number;
-  totalPossible: number;
-  finalGrade: number | null;
 }
 
 export default function StudentGradebookPage() {

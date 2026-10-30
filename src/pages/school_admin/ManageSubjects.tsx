@@ -18,8 +18,7 @@ import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 import { COLORS } from "../../constant/colors";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function ManageSubjects() {
   const { user } = useAuth();

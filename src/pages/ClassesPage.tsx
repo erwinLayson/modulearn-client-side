@@ -14,7 +14,6 @@ import {
   type ClassListItem,
   type FacultyClassAssignment,
   type EnrollmentListItem,
-  type UserRole,
   type EnrollmentClass,
   type StudentClassDetail,
 } from "../service/classesService";
@@ -22,12 +21,7 @@ import ActionIcon from "../components/ActionIcon";
 import Tooltip from "../components/Tooltip";
 import Toast from "../components/Toast";
 import { COLORS } from "../constant/colors";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
-
-interface ClassesPageProps {
-  role: UserRole;
-}
+import type { ToastState, ClassesPageProps } from "../types";
 
 export default function ClassesPage({ role }: ClassesPageProps) {
   const { user } = useAuth();

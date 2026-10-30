@@ -29,8 +29,7 @@ import {
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);

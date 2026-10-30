@@ -9,6 +9,7 @@ import {
 } from "../../service/student/studentAttendanceService";
 import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
+import type { MatrixRow } from "../../types";
 
 function getStatusColor(rate: number): string {
   if (rate >= 75) return COLORS.present;
@@ -24,13 +25,6 @@ function formatDateShort(dateStr: string): string {
 function formatWeekday(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { weekday: "short" });
-}
-
-interface MatrixRow {
-  subject_id: string;
-  subject_name: string;
-  teacher_name: string;
-  statuses: Record<string, "present" | "absent">;
 }
 
 export default function StudentAttendancePage() {

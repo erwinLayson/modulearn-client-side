@@ -9,8 +9,13 @@ import {
 } from "../../service/school_admin/attendanceReportService";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type {
+  ToastState,
+  DayInfo,
+  MatrixCell,
+  ClassGroup,
+  Filters,
+} from "../../types";
 
 /* ---------- constants ---------- */
 
@@ -25,53 +30,6 @@ const COL_CLASS_W = 150;
 const COL_GRADE_W = 90;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
-
-/* ---------- types ---------- */
-
-interface DayInfo {
-  date: string; // YYYY-MM-DD
-  dayNum: number;
-  dow: string;
-  isWeekend: boolean;
-}
-
-interface MatrixCell {
-  classId: string;
-  className: string;
-  section: string | null;
-  gradeLevel: string | null;
-  subjectId: string;
-  subjectName: string;
-  teacherName: string | null;
-  totalEnrolled: number;
-  date: string;
-  present: number;
-  rate: number;
-}
-
-interface SubjectRow {
-  subjectId: string;
-  subjectName: string;
-  cells: Map<string, MatrixCell>;
-}
-
-interface ClassGroup {
-  classId: string;
-  className: string;
-  section: string | null;
-  gradeLevel: string | null;
-  subjects: SubjectRow[];
-}
-
-interface Filters {
-  grade_level: string;
-  class_id: string;
-  subject_id: string;
-  teacher_id: string;
-  month: number;
-  year: number;
-  search: string;
-}
 
 /* ---------- helpers ---------- */
 

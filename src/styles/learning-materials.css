@@ -1,0 +1,495 @@
+/* ============================================================
+   ModuLearn — Student Learning Materials Table Styles
+   Improves table readability, column distribution, file details,
+   semantic badges, and sticky responsive actions.
+   ============================================================ */
+
+.student-materials-panel {
+  background: var(--ml-surface, #ffffff);
+  border: 1px solid var(--ml-border, #e2e8f0);
+  border-radius: 0.75rem;
+  box-shadow: var(--ml-shadow);
+  overflow: hidden;
+}
+
+.student-materials-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 1.5rem;
+  background: var(--ml-surface-alt, #e8f1ff);
+  border-bottom: 1px solid var(--ml-border, #e2e8f0);
+}
+
+.student-materials-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.student-materials-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(13, 110, 253, 0.12);
+  color: var(--ml-accent, #0d6efd);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Scrollable container */
+.student-materials-wrap {
+  position: relative;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--ml-surface, #ffffff);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.student-materials-wrap:focus-visible {
+  outline: 2px solid var(--ml-accent, #0d6efd);
+  outline-offset: -2px;
+}
+
+/* Table element */
+.student-materials-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 0.875rem;
+}
+
+/* Table headers */
+.student-materials-table th {
+  padding: 0.875rem 1.25rem;
+  background: var(--ml-surface-alt, #e8f1ff);
+  color: var(--ml-primary, #0b2a5b);
+  font-size: 0.71875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--ml-border, #e2e8f0);
+  text-align: left;
+  vertical-align: middle;
+  user-select: none;
+}
+
+/* Table data cells */
+.student-materials-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--ml-border, #e2e8f0);
+  color: var(--ml-text, #0f172a);
+  vertical-align: middle;
+  background: var(--ml-surface, #ffffff);
+  transition: background-color 0.15s ease;
+  overflow: hidden;
+}
+
+.student-materials-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* Sticky Action column */
+.student-materials-table th.materials-col-actions,
+.student-materials-table td.materials-col-actions {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  text-align: center;
+  border-left: 1px solid var(--ml-border, #e2e8f0);
+  background: var(--ml-surface, #ffffff);
+  box-shadow: -4px 0 10px -2px rgba(15, 23, 42, 0.06);
+}
+
+.student-materials-table th.materials-col-actions {
+  background: var(--ml-surface-alt, #e8f1ff);
+  z-index: 2;
+}
+
+.student-materials-table tbody tr:hover td.materials-col-actions {
+  background-color: #f8fafc;
+}
+
+/* Cell typography */
+.materials-cell-primary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ml-text, #0f172a);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.materials-cell-secondary {
+  font-size: 0.75rem;
+  color: var(--ml-text-secondary, #64748b);
+  line-height: 1.35;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Details column: File presentation */
+.materials-file-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.materials-file-icon-wrap {
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.materials-file-cell:hover .materials-file-icon-wrap {
+  transform: scale(1.04);
+}
+
+/* Semantic icon color backgrounds */
+.materials-file-icon--pdf {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.materials-file-icon--word {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.materials-file-icon--excel {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.materials-file-icon--powerpoint {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.materials-file-icon--image {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.materials-file-icon--archive {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.materials-file-icon--text {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.materials-file-icon--generic {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.materials-file-icon--written {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.materials-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.materials-file-name-btn {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ml-text, #0f172a);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.materials-file-name-btn:hover {
+  color: var(--ml-accent, #0d6efd);
+  text-decoration: underline;
+}
+
+.materials-file-name-btn:focus-visible {
+  outline: 2px solid var(--ml-accent, #0d6efd);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.materials-file-subtext {
+  display: block;
+  font-size: 0.71875rem;
+  color: var(--ml-text-muted, #94a3b8);
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.materials-file-notes {
+  margin-top: 0.25rem;
+  font-size: 0.71875rem;
+  color: var(--ml-text-secondary, #64748b);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Semantic Type Badges */
+.materials-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border-width: 1px;
+  border-style: solid;
+  line-height: 1;
+}
+
+.materials-type-badge--pdf {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.materials-type-badge--word {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.materials-type-badge--excel {
+  background: #f0fdf4;
+  color: #059669;
+  border-color: #bbf7d0;
+}
+
+.materials-type-badge--powerpoint {
+  background: #fffbeb;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.materials-type-badge--image {
+  background: #faf5ff;
+  color: #7c3aed;
+  border-color: #e9d5ff;
+}
+
+.materials-type-badge--archive {
+  background: #fff7ed;
+  color: #ea580c;
+  border-color: #fed7aa;
+}
+
+.materials-type-badge--generic {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.materials-type-badge--written {
+  background: #f0f9ff;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+/* Action buttons */
+.materials-actions-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.materials-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 2.125rem;
+  padding: 0 0.65rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--ml-border, #e2e8f0);
+  background: var(--ml-surface, #ffffff);
+  color: var(--ml-text-secondary, #64748b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.materials-btn:hover {
+  background: var(--ml-surface-alt, #e8f1ff);
+  border-color: var(--ml-accent, #0d6efd);
+  color: var(--ml-accent, #0d6efd);
+}
+
+.materials-btn:focus-visible {
+  outline: 2px solid var(--ml-accent, #0d6efd);
+  outline-offset: 1px;
+}
+
+.materials-btn--icon-only {
+  width: 2.125rem;
+  padding: 0;
+}
+
+.materials-btn--read {
+  color: var(--ml-accent, #0d6efd);
+  border-color: rgba(13, 110, 253, 0.25);
+  background: rgba(13, 110, 253, 0.04);
+}
+
+.materials-btn--read:hover {
+  background: rgba(13, 110, 253, 0.12);
+  border-color: var(--ml-accent, #0d6efd);
+}
+
+.materials-btn--download {
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.25);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.materials-btn--download:hover {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #059669;
+  color: #059669;
+}
+
+/* Material Preview Modal Elements */
+.material-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--ml-surface-alt, #e8f1ff);
+  border-radius: 0.625rem;
+  border: 1px solid var(--ml-border, #e2e8f0);
+  margin-bottom: 1.25rem;
+}
+
+.material-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.material-preview-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ml-text, #0f172a);
+  word-break: break-all;
+}
+
+.material-preview-meta {
+  font-size: 0.75rem;
+  color: var(--ml-text-secondary, #64748b);
+  margin-top: 0.25rem;
+}
+
+.material-preview-section {
+  margin-bottom: 1.25rem;
+}
+
+.material-preview-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-text-muted, #94a3b8);
+  margin-bottom: 0.5rem;
+}
+
+.material-preview-context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #f8fafc;
+  border: 1px solid var(--ml-border, #e2e8f0);
+  border-radius: 0.5rem;
+}
+
+.material-preview-context-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.material-preview-context-label {
+  font-size: 0.6875rem;
+  color: var(--ml-text-muted, #94a3b8);
+  text-transform: uppercase;
+}
+
+.material-preview-context-val {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ml-text, #0f172a);
+  margin-top: 0.15rem;
+}
+
+.material-preview-image-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 400px;
+  background: #f8fafc;
+  border: 1px solid var(--ml-border, #e2e8f0);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.material-preview-image {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .student-materials-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .student-materials-table th,
+  .student-materials-table td {
+    padding: 0.875rem 1rem;
+  }
+}

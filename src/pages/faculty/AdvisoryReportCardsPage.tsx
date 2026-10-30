@@ -12,8 +12,7 @@ import {
 } from "../../service/faculty/advisoryReportCardsService";
 import AcademicRecordSheet from "../../components/AcademicRecordSheet";
 import Toast from "../../components/Toast";
-
-type ToastState = { message: string; type: "success" | "error" } | null;
+import type { ToastState } from "../../types";
 
 export default function AdvisoryReportCardsPage() {
   const { classId } = useParams<{ classId: string }>();
