@@ -1,9 +1,12 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useAuth } from "../../context/AuthContext";
-import { attendanceApi, classApi, type ClassListItem } from "../../api/classes";
-import { subjectApi, type SubjectListItem } from "../../api/subjects";
-import apiClient from "../../api/client";
+import {
+  fetchAttendanceRefData,
+  fetchAttendanceMatrix,
+  type ClassListItem,
+  type SubjectListItem,
+} from "../../service/school_admin/attendanceReportService";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
 
@@ -203,16 +206,10 @@ export default function AttendanceReport() {
     if (!schoolId) return;
     const fetchRefData = async () => {
       try {
-        const [classesRes, subjectsRes, facultiesRes] = await Promise.all([
-          classApi.getBySchoolId(schoolId),
-          subjectApi.getBySchoolId(schoolId),
-          apiClient.get<{ data: { id: string; first_name: string; last_name: string }[] }>(`/faculties/school/${schoolId}`),
-        ]);
-        setClasses(classesRes.data.data || []);
-        setSubjects(subjectsRes.data.data || []);
-        setTeachers(
-          (facultiesRes.data.data || []).map(f => ({ id: f.id, name: `${f.first_name} ${f.last_name}` }))
-        );
+        const refData = await fetchAttendanceRefData(schoolId);
+        setClasses(refData.classes);
+        setSubjects(refData.subjects);
+        setTeachers(refData.teachers);
       } catch {
         setToast({ message: "Failed to load reference data", type: "error" });
       }
@@ -225,7 +222,7 @@ export default function AttendanceReport() {
     if (!schoolId) return;
     setLoading(true);
     try {
-      const res = await attendanceApi.getSchoolMatrix(schoolId, {
+      const data = await fetchAttendanceMatrix(schoolId, {
         year: filters.year,
         month: filters.month,
         class_id: filters.class_id || undefined,
@@ -233,7 +230,7 @@ export default function AttendanceReport() {
         teacher_id: filters.teacher_id || undefined,
         grade_level: filters.grade_level || undefined,
       });
-      setMatrix(res.data.data);
+      setMatrix(data);
     } catch {
       setToast({ message: "Failed to load attendance history", type: "error" });
     } finally {

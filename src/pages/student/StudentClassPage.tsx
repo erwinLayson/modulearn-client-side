@@ -1,81 +1,26 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { enrollmentApi } from "../../api/enrollments";
-import { classApi, type ScheduleItem } from "../../api/classes";
-import { schoolYearApi } from "../../api/school-years";
 import { COLORS } from "../../constant/colors";
-
-interface ClassDetail {
-  id: string;
-  class_name: string;
-  grade_level: string | null;
-  section: string | null;
-  capacity: number | null;
-  faculty_name: string | null;
-  schedule: ScheduleItem[] | null;
-  subjects: { id: string; name: string; teacher_name: string | null }[];
-}
-
-function formatSchedule(schedule: ScheduleItem[] | null): { text: string; lines: string[] } {
-  if (!Array.isArray(schedule) || schedule.length === 0) return { text: "—", lines: [] };
-  const lines = schedule.map(s => {
-    const day = s.day;
-    const time = `${s.start_time}–${s.end_time}`;
-    return `${day} ${time}`;
-  });
-  return { text: lines.join(", "), lines };
-}
+import {
+  formatSchedule,
+  loadStudentClass,
+  type StudentClassDetail,
+} from "../../service/studentClassService";
 
 export default function StudentClassPage() {
   const { user } = useAuth();
-  const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
+  const [classDetail, setClassDetail] = useState<StudentClassDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.school_id) return;
+    const schoolId = user.school_id;
+    const studentId = user.id;
     let cancelled = false;
     (async () => {
       try {
-        const syRes = await schoolYearApi.getCurrent(user.school_id!);
-        const sy = syRes.data.data;
-        if (cancelled || !sy) {
-          setLoading(false);
-          return;
-        }
-        const enrollRes = await enrollmentApi.getClassesByStudentId(user.id);
-        const classesData = enrollRes.data.data || [];
-        if (classesData.length === 0) {
-          setLoading(false);
-          return;
-        }
-        const ec = classesData[0];
-        const classRes = await classApi.getById(ec.class_id);
-        const cls = classRes.data.data;
-
-        let subjectsWithTeachers: { id: string; name: string; teacher_name: string | null }[] = [];
-        try {
-          const facultiesRes = await classApi.getFaculties(ec.class_id);
-          subjectsWithTeachers = (facultiesRes.data.data || []).map(f => ({
-            id: f.subject_id || f.id,
-            name: f.subject_name || "Unknown Subject",
-            teacher_name: `${f.first_name} ${f.last_name}`,
-          }));
-        } catch {
-          subjectsWithTeachers = ec.subjects?.map(s => ({ id: s.id, name: s.name, teacher_name: null })) || [];
-        }
-
-        if (!cancelled) {
-          setClassDetail({
-            id: cls.id,
-            class_name: cls.class_name,
-            grade_level: cls.grade_level,
-            section: cls.section,
-            capacity: cls.capacity,
-            faculty_name: cls.faculty_name,
-            schedule: cls.schedule,
-            subjects: subjectsWithTeachers,
-          });
-        }
+        const detail = await loadStudentClass(schoolId, studentId);
+        if (!cancelled) setClassDetail(detail);
       } catch {
         // silently fail
       } finally {

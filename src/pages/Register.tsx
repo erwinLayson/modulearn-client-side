@@ -2,50 +2,17 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import BackHome from "../components/BackHome";
 import Toast from "../components/Toast";
-import { registerSchool } from "../api/schools";
-
-interface SchoolForm {
-  school_name: string;
-  school_id: string;
-  school_level: string;
-  school_email: string;
-  address: string;
-  region: string;
-  province: string;
-  city: string;
-  contact_number: string;
-  school_logo: string;
-  school_admin: string;
-  academic_system: string;
-  period_count: string;
-}
-
-const initialForm: SchoolForm = {
-  school_name: "",
-  school_id: "",
-  school_level: "",
-  school_email: "",
-  address: "",
-  region: "",
-  province: "",
-  city: "",
-  contact_number: "",
-  school_logo: "",
-  school_admin: "",
-  academic_system: "quarter",
-  period_count: "4",
-};
-
-const schoolLevels = [
-  { value: "1", label: "Elementary School" },
-  { value: "2", label: "Junior High School" },
-  { value: "3", label: "Senior High School" },
-  { value: "4", label: "College & University" },
-];
+import {
+  submitSchoolRegistration,
+  initialRegistrationForm,
+  schoolLevels,
+  getApiErrorMessage,
+  type SchoolRegistrationForm as SchoolForm,
+} from "../service/registerService";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<SchoolForm>(initialForm);
+  const [form, setForm] = useState<SchoolForm>(initialRegistrationForm);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -63,31 +30,13 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const payload = {
-        school_name: form.school_name,
-        school_id: Number(form.school_id),
-        school_level: Number(form.school_level),
-        school_email: form.school_email,
-        address: form.address,
-        region: form.region,
-        province: form.province,
-        city: form.city,
-        contact_number: form.contact_number,
-        school_logo: form.school_logo,
-        school_admin: form.school_admin,
-        academic_system: form.academic_system,
-        period_count: Number(form.period_count),
-      };
-      const { data } = await registerSchool(payload);
+      const data = await submitSchoolRegistration(form);
       if (data.isOk) {
         setToast({ message: "School registered successfully! Redirecting to login...", type: "success" });
         setTimeout(() => navigate("/login"), 1500);
       }
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Registration failed. Please try again."
-          : "Registration failed. Please try again.";
+      const msg = getApiErrorMessage(err, "Registration failed. Please try again.");
       setError(msg);
       setToast({ message: msg, type: "error" });
     } finally {

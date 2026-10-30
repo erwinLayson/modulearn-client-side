@@ -1,7 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { moduleApi, type ModuleListItem, type ModulePayload } from "../../api/modules";
-import { subjectApi, type SubjectListItem } from "../../api/subjects";
+import {
+  fetchModulesForSuperAdmin,
+  fetchModulesAndSubjectsForSchool,
+  createModule,
+  updateModule,
+  deleteModule,
+  getApiErrorMessage,
+  type ModuleListItem,
+  type ModulePayload,
+  type SubjectListItem,
+} from "../../service/admin/manageModulesService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
@@ -35,15 +44,12 @@ export default function ManageModules() {
   const fetchData = useCallback(async () => {
     try {
       if (isSuperAdmin) {
-        const modulesRes = await moduleApi.getAll();
-        setModules(modulesRes.data.data || []);
+        const modules = await fetchModulesForSuperAdmin();
+        setModules(modules);
       } else if (schoolId) {
-        const [modulesRes, subjectsRes] = await Promise.all([
-          moduleApi.getBySchoolId(schoolId),
-          subjectApi.getBySchoolId(schoolId),
-        ]);
-        setModules(modulesRes.data.data || []);
-        setSubjects(subjectsRes.data.data || []);
+        const { modules, subjects } = await fetchModulesAndSubjectsForSchool(schoolId);
+        setModules(modules);
+        setSubjects(subjects);
       }
     } catch {
       setToast({ message: "Failed to load data", type: "error" });
@@ -59,16 +65,13 @@ export default function ManageModules() {
     if (!isSuperAdmin && !schoolId) return;
     setSubmitting(true);
     try {
-      await moduleApi.create({ ...createForm, school_id: schoolId, admin_id: user?.id ?? "" });
+      await createModule({ ...createForm, school_id: schoolId, admin_id: user?.id ?? "" });
       setToast({ message: "Module created successfully", type: "success" });
       setShowCreate(false);
       setCreateForm({ title: "", description: "", subject: "", subject_id: null, school_id: schoolId, admin_id: user?.id ?? "" });
       fetchData();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create module"
-        : "Failed to create module";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to create module"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -90,16 +93,13 @@ export default function ManageModules() {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await moduleApi.update(editing.id, editForm);
+      await updateModule(editing.id, editForm);
       setToast({ message: "Module updated successfully", type: "success" });
       setShowEdit(false);
       setEditing(null);
       fetchData();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update module"
-        : "Failed to update module";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to update module"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -108,7 +108,7 @@ export default function ManageModules() {
   const handleDelete = async (m: ModuleListItem) => {
     if (!confirm(`Delete ${m.title}?`)) return;
     try {
-      await moduleApi.delete(m.id);
+      await deleteModule(m.id);
       setToast({ message: "Module deleted", type: "success" });
       fetchData();
     } catch {

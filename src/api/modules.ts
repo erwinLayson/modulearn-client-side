@@ -90,6 +90,38 @@ export interface TeacherModuleDetail {
   lessons: ModuleLessonItem[];
 }
 
+export interface LessonClassroomAssignment {
+  class_module_id: string;
+  classroom_id: string;
+  class_name: string;
+  school_year_id: number;
+  school_year_name: string;
+  school_year_is_current: number;
+  assigned: boolean;
+}
+
+export interface StudentLessonItem {
+  assignment_id: string;
+  lesson_id: string;
+  module_id: string;
+  module_title: string;
+  subject_name: string | null;
+  teacher_name: string | null;
+  class_id: string;
+  class_name: string;
+  school_year_id: number;
+  school_year_name: string;
+  title: string;
+  lesson_type: "text" | "file";
+  content: string | null;
+  file_name: string | null;
+  file_type: string | null;
+  file_size: number | null;
+  has_file: boolean;
+  sort_order: number;
+  assigned_at: string;
+}
+
 export interface EligibleClassroom {
   classroom_id: string;
   class_name: string;
@@ -161,4 +193,30 @@ export const teachingModuleApi = {
 
   deleteLesson: (moduleId: string, lessonId: string) =>
     apiClient.delete<{ message: string }>(`/modules/mine/${moduleId}/lessons/${lessonId}`),
+
+  listLessonAssignments: (moduleId: string, lessonId: string) =>
+    apiClient.get<{ data: LessonClassroomAssignment[] }>(
+      `/modules/mine/${moduleId}/lessons/${lessonId}/assignments`
+    ),
+
+  assignLessonToClass: (moduleId: string, lessonId: string, classModuleId: string) =>
+    apiClient.post<{ message: string }>(
+      `/modules/mine/${moduleId}/lessons/${lessonId}/assignments`,
+      { class_module_id: classModuleId }
+    ),
+
+  unassignLessonFromClass: (moduleId: string, lessonId: string, classModuleId: string) =>
+    apiClient.delete<{ message: string }>(
+      `/modules/mine/${moduleId}/lessons/${lessonId}/assignments/${classModuleId}`
+    ),
+};
+
+export const studentLessonApi = {
+  listMine: (schoolYearId?: number) =>
+    apiClient.get<{ data: StudentLessonItem[] }>("/modules/student/lessons", {
+      params: schoolYearId ? { school_year_id: schoolYearId } : undefined,
+    }),
+
+  fileDownloadUrl: (lessonId: string) =>
+    `/api/modules/student/lessons/${lessonId}/file`,
 };

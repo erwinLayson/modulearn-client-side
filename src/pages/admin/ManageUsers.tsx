@@ -1,25 +1,29 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { userApi, type UserRole, type UserUpdatePayload } from "../../api/users";
-import type { UserListItem } from "../../api/users";
-import { schoolApi, type SchoolListItem } from "../../api/schools";
-import { getApiErrorMessage } from "../../api/client";
+import {
+  fetchAllUsers,
+  fetchAllSchools,
+  createUser,
+  updateUser,
+  deleteUser,
+  updateUserPassword,
+  validatePasswordChange,
+  filterUsers,
+  buildSchoolOptions,
+  ROLE_FILTER_OPTIONS,
+  getApiErrorMessage,
+  type UserListItem,
+  type UserRole,
+  type UserUpdatePayload,
+  type SchoolListItem,
+  type CreateUserForm,
+} from "../../service/admin/manageUsersService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
 type RoleFilter = UserRole | "all";
-
-const MIN_PASSWORD_LENGTH = 6;
-
-const ROLE_FILTER_OPTIONS: { value: RoleFilter; label: string }[] = [
-  { value: "all", label: "All roles" },
-  { value: "super_admin", label: "Super Admin" },
-  { value: "school_admin", label: "School Admin" },
-  { value: "faculty", label: "Faculty" },
-  { value: "student", label: "Student" },
-];
 
 export default function ManageUsers() {
   const { user } = useAuth();
@@ -39,7 +43,7 @@ export default function ManageUsers() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editing, setEditing] = useState<UserListItem | null>(null);
-  const [createForm, setCreateForm] = useState({
+  const [createForm, setCreateForm] = useState<CreateUserForm>({
     email: "",
     password: "",
     role: "school_admin" as UserRole,
@@ -58,8 +62,8 @@ export default function ManageUsers() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const { data } = await userApi.getAll();
-      setUsers(data.data || []);
+      const data = await fetchAllUsers();
+      setUsers(data);
     } catch {
       setToast({ message: "Failed to load users", type: "error" });
     } finally {
@@ -71,8 +75,8 @@ export default function ManageUsers() {
   const fetchSchools = useCallback(async () => {
     if (!isSuperAdmin) return;
     try {
-      const { data } = await schoolApi.getAll();
-      setSchools(data.data || []);
+      const data = await fetchAllSchools();
+      setSchools(data);
     } catch {
       // ignore — options fall back to "School #<id>"
     }
@@ -87,30 +91,13 @@ export default function ManageUsers() {
   }, [schools]);
 
   const schoolOptions = useMemo(() => {
-    const ids = Array.from(
-      new Set(users.map((u) => u.school_id).filter((id): id is number => id != null))
-    ).sort((a, b) => a - b);
-    return ids.map((id) => ({ value: String(id), label: schoolNameById.get(id) ?? `School #${id}` }));
+    return buildSchoolOptions(users, schoolNameById);
   }, [users, schoolNameById]);
 
   const hasUnassignedSchool = useMemo(() => users.some((u) => u.school_id == null), [users]);
 
   const filteredUsers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return users.filter((u) => {
-      if (roleFilter !== "all" && u.role !== roleFilter) return false;
-      if (schoolFilter === "none") {
-        if (u.school_id != null) return false;
-      } else if (schoolFilter !== "all" && String(u.school_id ?? "") !== schoolFilter) {
-        return false;
-      }
-      if (!query) return true;
-      return (
-        (u.name ?? "").toLowerCase().includes(query) ||
-        u.email.toLowerCase().includes(query) ||
-        String(u.school_id ?? "").includes(query)
-      );
-    });
+    return filterUsers(users, search, roleFilter, schoolFilter);
   }, [users, search, roleFilter, schoolFilter]);
 
   const filtersActive = search.trim() !== "" || roleFilter !== "all" || schoolFilter !== "all";
@@ -125,16 +112,13 @@ export default function ManageUsers() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await userApi.create(createForm);
+      await createUser(createForm);
       setToast({ message: "User created successfully", type: "success" });
       setShowCreate(false);
       setCreateForm({ email: "", password: "", role: "school_admin", school_id: 0, status: "active", name: "" });
       fetchUsers();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create user"
-        : "Failed to create user";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to create user"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -158,16 +142,13 @@ export default function ManageUsers() {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await userApi.update(editing.id, editForm);
+      await updateUser(editing.id, editForm);
       setToast({ message: "User updated successfully", type: "success" });
       setShowEdit(false);
       setEditing(null);
       fetchUsers();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update user"
-        : "Failed to update user";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to update user"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -191,22 +172,15 @@ export default function ManageUsers() {
     if (!passwordTarget) return;
     const { new_password, confirm_password } = passwordForm;
 
-    if (!new_password) {
-      setToast({ message: "New password is required", type: "error" });
-      return;
-    }
-    if (new_password !== confirm_password) {
-      setToast({ message: "New passwords do not match", type: "error" });
-      return;
-    }
-    if (new_password.length < MIN_PASSWORD_LENGTH) {
-      setToast({ message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters`, type: "error" });
+    const validationError = validatePasswordChange(new_password, confirm_password);
+    if (validationError) {
+      setToast({ message: validationError, type: "error" });
       return;
     }
 
     setPasswordSubmitting(true);
     try {
-      await userApi.updatePassword(passwordTarget.id, { new_password });
+      await updateUserPassword(passwordTarget.id, new_password);
       setToast({ message: `Password updated for ${passwordTarget.email}`, type: "success" });
       closePassword();
     } catch (err: unknown) {
@@ -220,7 +194,7 @@ export default function ManageUsers() {
   const handleDelete = async (u: UserListItem) => {
     if (!confirm(`Delete ${u.name || u.email}?`)) return;
     try {
-      await userApi.delete(u.id);
+      await deleteUser(u.id);
       setToast({ message: "User deleted", type: "success" });
       fetchUsers();
     } catch {

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { classApi, type ClassListItem } from "../../api/classes";
+import { fetchClasses, type ClassListItem, type ScheduleItem } from "../../service/admin/manageClassesService";
 import Toast from "../../components/Toast";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
@@ -13,10 +13,10 @@ export default function ManageClasses() {
   const [toast, setToast] = useState<ToastState>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  const fetchClasses = useCallback(async () => {
+  const fetchClassesData = useCallback(async () => {
     try {
-      const { data } = await classApi.getAll();
-      setClasses(data.data || []);
+      const data = await fetchClasses();
+      setClasses(data);
     } catch {
       setToast({ message: "Failed to load classes", type: "error" });
     } finally {
@@ -24,7 +24,7 @@ export default function ManageClasses() {
     }
   }, []);
 
-  useEffect(() => { fetchClasses(); }, [fetchClasses]);
+  useEffect(() => { fetchClassesData(); }, [fetchClassesData]);
 
   if (!user) return null;
 
@@ -124,7 +124,7 @@ export default function ManageClasses() {
                       <div className="mgmt-card-detail-content">
                         <span className="mgmt-card-detail-label">Schedule</span>
                         <div className="mgmt-card-schedule">
-                          {c.schedule.map((s, i) => (
+                          {c.schedule.map((s: ScheduleItem, i: number) => (
                             <span key={i} className="mgmt-schedule-chip">
                               <strong>{s.day}</strong> {s.start_time}-{s.end_time}
                               {s.room && ` (${s.room})`}

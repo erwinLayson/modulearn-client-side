@@ -2,40 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
 import { useNavigate } from "react-router-dom";
-import apiClient from "../../api/client";
-
-interface FacultyData {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
-interface StudentData {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
-interface ModuleData {
-  id: string;
-  title: string;
-  subject: string;
-}
-
-interface SubjectData {
-  id: string;
-  name: string;
-}
-
-interface ClassData {
-  id: string;
-  class_name: string;
-  module_title: string;
-  faculty_name: string;
-  capacity: number | null;
-}
+import {
+  fetchSchoolAdminDashboardData,
+  type SchoolAdminFacultyData as FacultyData,
+  type SchoolAdminStudentData as StudentData,
+  type SchoolAdminModuleData as ModuleData,
+  type SchoolAdminSubjectData as SubjectData,
+  type SchoolAdminClassData as ClassData,
+} from "../../service/school_admin/schoolAdminDashboardService";
 
 export default function SchoolAdminDashboard() {
   const { user } = useAuth();
@@ -54,22 +28,17 @@ export default function SchoolAdminDashboard() {
   };
 
   useEffect(() => {
-    if (!user?.school_id) return;
+    const schoolId = user?.school_id;
+    if (!schoolId) return;
 
     const fetchData = async () => {
       try {
-        const [facultiesRes, studentsRes, modulesRes, subjectsRes, classesRes] = await Promise.all([
-          apiClient.get<{ data: FacultyData[] }>(`/faculties/school/${user.school_id}`),
-          apiClient.get<{ data: StudentData[] }>(`/students/school/${user.school_id}`),
-          apiClient.get<{ data: ModuleData[] }>(`/modules/school/${user.school_id}`),
-          apiClient.get<{ data: SubjectData[] }>(`/subjects/school/${user.school_id}`),
-          apiClient.get<{ data: ClassData[] }>(`/classes/school/${user.school_id}`),
-        ]);
-        setFaculties(facultiesRes.data.data || []);
-        setStudents(studentsRes.data.data || []);
-        setModules(modulesRes.data.data || []);
-        setSubjects(subjectsRes.data.data || []);
-        setClasses(classesRes.data.data || []);
+        const data = await fetchSchoolAdminDashboardData(schoolId);
+        setFaculties(data.faculties);
+        setStudents(data.students);
+        setModules(data.modules);
+        setSubjects(data.subjects);
+        setClasses(data.classes);
       } catch {
         // silently fail
       } finally {

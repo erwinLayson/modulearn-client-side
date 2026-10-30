@@ -1,25 +1,19 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { classApi, type ClassListItem } from "../../api/classes";
-import { enrollmentApi } from "../../api/enrollments";
-import { schoolYearApi } from "../../api/school-years";
-import { studentApi, type AcademicRecordResponse } from "../../api/students";
+import {
+  fetchClassAndSchoolYear,
+  fetchEnrolledStudents,
+  loadBatchStudentRecords,
+  FETCH_BATCH_SIZE,
+  type ClassListItem,
+  type BatchEntry,
+  type Scope,
+} from "../../service/faculty/advisoryReportCardsService";
 import AcademicRecordSheet from "../../components/AcademicRecordSheet";
 import Toast from "../../components/Toast";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-type Scope = "current" | "all";
-
-/** A loaded report card, or a student whose record could not be read. */
-interface BatchEntry {
-  student_id: string;
-  student_name: string;
-  record: AcademicRecordResponse | null;
-  error: string | null;
-}
-
-const FETCH_BATCH_SIZE = 4;
 
 export default function AdvisoryReportCardsPage() {
   const { classId } = useParams<{ classId: string }>();
@@ -45,41 +39,24 @@ export default function AdvisoryReportCardsPage() {
     setLoadedCount(0);
 
     try {
-      const [classRes, syRes] = await Promise.all([
-        classApi.getById(classId),
-        schoolYearApi.getCurrent(user.school_id),
-      ]);
-      const detail = classRes.data.data;
+      const { cls: detail, schoolYearName: syName, schoolYearId } =
+        await fetchClassAndSchoolYear(classId, user.school_id);
       setCls(detail);
 
-      const currentYear = syRes.data.data;
-      if (!currentYear) {
+      if (!syName || !schoolYearId) {
         setSchoolYearName(null);
         setTotalCount(0);
         setToast({ message: "No current school year set for this school", type: "error" });
         return;
       }
-      setSchoolYearName(currentYear.name);
+      setSchoolYearName(syName);
 
-      const enrollRes = await enrollmentApi.getByClassAndSchoolYear(classId, currentYear.id);
-      const students = (enrollRes.data.data || []).map((e) => ({
-        student_id: e.student_id,
-        student_name: e.student_name,
-      }));
+      const students = await fetchEnrolledStudents(classId, schoolYearId);
       setTotalCount(students.length);
 
       for (let i = 0; i < students.length; i += FETCH_BATCH_SIZE) {
         const chunk = students.slice(i, i + FETCH_BATCH_SIZE);
-        const results = await Promise.all(
-          chunk.map(async (student): Promise<BatchEntry> => {
-            try {
-              const res = await studentApi.getAcademicRecord(student.student_id, scope);
-              return { ...student, record: res.data.data, error: null };
-            } catch {
-              return { ...student, record: null, error: "Could not load this report card" };
-            }
-          })
-        );
+        const results = await loadBatchStudentRecords(chunk, scope);
         setEntries((prev) => [...prev, ...results]);
         setLoadedCount((prev) => prev + results.length);
       }

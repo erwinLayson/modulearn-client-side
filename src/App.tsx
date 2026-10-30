@@ -31,6 +31,7 @@ import GradebookSubject from "./pages/faculty/GradebookSubject";
 import AdvisoryReportCardsPage from "./pages/faculty/AdvisoryReportCardsPage";
 import FacultyAttendancePage from "./pages/faculty/FacultyAttendancePage";
 import StudentGradebookPage from "./pages/student/StudentGradebookPage";
+import StudentLessonsPage from "./pages/student/StudentLessonsPage";
 import SchoolSettings from "./pages/school_admin/SchoolSettings";
 import SettingsPage from "./pages/SettingsPage";
 
@@ -199,6 +200,9 @@ export default function App() {
                     </FeatureGate>
                   }
                 />
+                <Route path="lessons" element={<ProtectedRoute allowedRoles={["student"]} />}>
+                  <Route index element={<StudentLessonsPage />} />
+                </Route>
                 <Route path="schedule" element={<PlaceholderPage />} />
               </Route>
             </Route>

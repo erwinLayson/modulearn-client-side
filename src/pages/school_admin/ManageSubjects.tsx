@@ -1,6 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { subjectApi, type SubjectListItem, type SubjectPayload, type SubjectFaculty } from "../../api/subjects";
+import {
+  fetchSubjects,
+  fetchSubjectDetails,
+  assignFacultyToSubject,
+  removeFacultyFromSubject,
+  createSubject,
+  updateSubject,
+  deleteSubject,
+  filterUnassignedFaculties,
+  getApiErrorMessage,
+  type SubjectListItem,
+  type SubjectPayload,
+  type SubjectFaculty,
+} from "../../service/school_admin/manageSubjectsService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
@@ -39,8 +52,8 @@ export default function ManageSubjects() {
   const fetchData = useCallback(async () => {
     if (!schoolId) return;
     try {
-      const subjectsRes = await subjectApi.getBySchoolId(schoolId);
-      setSubjects(subjectsRes.data.data || []);
+      const data = await fetchSubjects(schoolId);
+      setSubjects(data);
     } catch {
       setToast({ message: "Failed to load subjects", type: "error" });
     } finally {
@@ -54,12 +67,9 @@ export default function ManageSubjects() {
     setSelectedSubject(subject);
     setDetailLoading(true);
     try {
-      const [assignedRes, availableRes] = await Promise.all([
-        subjectApi.getFaculties(subject.id),
-        subjectApi.getAvailableFaculties(schoolId),
-      ]);
-      setAssignedFaculties(assignedRes.data.data || []);
-      setAvailableFaculties(availableRes.data.data || []);
+      const details = await fetchSubjectDetails(subject.id, schoolId);
+      setAssignedFaculties(details.assignedFaculties);
+      setAvailableFaculties(details.availableFaculties);
     } catch {
       setToast({ message: "Failed to load subject details", type: "error" });
     } finally {
@@ -76,7 +86,7 @@ export default function ManageSubjects() {
   const handleAssignFaculty = async (facultyId: string) => {
     if (!selectedSubject) return;
     try {
-      await subjectApi.assignFaculty(selectedSubject.id, facultyId);
+      await assignFacultyToSubject(selectedSubject.id, facultyId);
       setToast({ message: "Faculty assigned", type: "success" });
       openSubjectDetail(selectedSubject);
       setShowAssignModal(false);
@@ -89,7 +99,7 @@ export default function ManageSubjects() {
     if (!selectedSubject) return;
     if (!confirm("Remove this faculty from the subject?")) return;
     try {
-      await subjectApi.removeFaculty(selectedSubject.id, facultyId);
+      await removeFacultyFromSubject(selectedSubject.id, facultyId);
       setToast({ message: "Faculty removed", type: "success" });
       openSubjectDetail(selectedSubject);
     } catch {
@@ -101,16 +111,13 @@ export default function ManageSubjects() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await subjectApi.create({ ...createForm, school_id: schoolId, admin_id: user?.id ?? "" });
+      await createSubject({ ...createForm, school_id: schoolId, admin_id: user?.id ?? "" });
       setToast({ message: "Subject created successfully", type: "success" });
       setShowCreate(false);
       setCreateForm({ name: "", subject_code: "", description: "", school_id: schoolId, admin_id: user?.id ?? "" });
       fetchData();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create subject"
-        : "Failed to create subject";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to create subject"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -127,16 +134,13 @@ export default function ManageSubjects() {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await subjectApi.update(editing.id, editForm);
+      await updateSubject(editing.id, editForm);
       setToast({ message: "Subject updated successfully", type: "success" });
       setShowEdit(false);
       setEditing(null);
       fetchData();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update subject"
-        : "Failed to update subject";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to update subject"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -145,7 +149,7 @@ export default function ManageSubjects() {
   const handleDelete = async (s: SubjectListItem) => {
     if (!confirm(`Delete ${s.name}?`)) return;
     try {
-      await subjectApi.delete(s.id);
+      await deleteSubject(s.id);
       setToast({ message: "Subject deleted", type: "success" });
       fetchData();
     } catch {
@@ -153,13 +157,15 @@ export default function ManageSubjects() {
     }
   };
 
+  const notAssignedFaculties = useMemo(() => {
+    return filterUnassignedFaculties(availableFaculties, assignedFaculties);
+  }, [availableFaculties, assignedFaculties]);
+
   if (!user) return null;
 
   // ========== DETAIL VIEW ==========
   if (selectedSubject) {
-    const notAssigned = availableFaculties.filter(
-      (af) => !assignedFaculties.some((af2) => af2.id === af.id)
-    );
+    const notAssigned = notAssignedFaculties;
 
     return (
       <div className="mgmt-page">

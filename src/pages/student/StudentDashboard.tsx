@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
-import { enrollmentApi, type StudentEnrollment } from "../../api/enrollments";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
-import { attendanceApi, type StudentSubjectAttendance} from "../../api/classes";
+import {
+  fetchStudentDashboardData,
+  type StudentEnrollment,
+  type SchoolYear,
+  type StudentSubjectAttendance,
+} from "../../service/student/studentDashboardService";
 import { COLORS } from "../../constant/colors";
 
 export default function StudentDashboard() {
@@ -17,31 +20,15 @@ export default function StudentDashboard() {
   const [attendanceLoading, setAttendanceLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id || !user?.school_id) return;
+    const schoolId = user?.school_id;
+    if (!user?.id || !schoolId) return;
 
     const fetchData = async () => {
       try {
-        const syRes = await schoolYearApi.getCurrent(user.school_id!);
-        const sy = syRes.data.data;
-        setCurrentSY(sy);
-
-        if (sy) {
-          const enrollRes = await enrollmentApi.getByStudentAndSchoolYear(user.id, sy.id);
-          setEnrollment(enrollRes.data.data);
-
-          // Fetched separately so a switched-off attendance feature cannot
-          // blank out the rest of the dashboard.
-          if (canViewAttendance) {
-            try {
-              const attendanceRes = await attendanceApi.getStudentBySubject(sy.id);
-              setAttendanceBySubject(attendanceRes.data.data || []);
-            } catch {
-              setAttendanceBySubject([]);
-            }
-          } else {
-            setAttendanceBySubject([]);
-          }
-        }
+        const data = await fetchStudentDashboardData(user.id, schoolId, canViewAttendance);
+        setCurrentSY(data.currentSY);
+        setEnrollment(data.enrollment);
+        setAttendanceBySubject(data.attendanceBySubject);
       } catch {
         // silently fail
       } finally {

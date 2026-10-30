@@ -1,58 +1,37 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
-import { attendanceApi, type FacultyDashboardSummary } from "../../api/classes";
-import { schoolYearApi } from "../../api/school-years";
-import apiClient from "../../api/client";
+import {
+  fetchFacultyDashboardData,
+  fetchFacultyAttendanceSummary,
+  type FacultyDashboardSummary,
+  type FacultyDashboardClassData,
+  type FacultyDashboardModuleData,
+  type FacultyDashboardStudentData,
+} from "../../service/faculty/facultyDashboardService";
 import { COLORS } from "../../constant/colors";
-
-interface ModuleData {
-  id: string;
-  title: string;
-  subject: string;
-}
-
-interface StudentData {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
-
-interface ClassData {
-  id: string;
-  class_name: string;
-  module_id: string;
-  faculty_id: string;
-  school_year_id: number;
-}
 
 export default function FacultyDashboard() {
   const { user } = useAuth();
   const { isEnabled } = useFeatures();
   const canViewAttendance = isEnabled("attendance");
-  const [classes, setClasses] = useState<ClassData[]>([]);
-  const [modules, setModules] = useState<ModuleData[]>([]);
-  const [students, setStudents] = useState<StudentData[]>([]);
+  const [classes, setClasses] = useState<FacultyDashboardClassData[]>([]);
+  const [modules, setModules] = useState<FacultyDashboardModuleData[]>([]);
+  const [students, setStudents] = useState<FacultyDashboardStudentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [attendanceSummary, setAttendanceSummary] = useState<FacultyDashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.school_id) return;
+    const schoolId = user?.school_id;
+    if (!schoolId) return;
 
     const fetchData = async () => {
       try {
-     const [classesRes, modulesRes, studentsRes, syRes] = await Promise.all([
-       apiClient.get<{ data: ClassData[] }>(`/classes/faculty/${user.id}`),
-       apiClient.get<{ data: ModuleData[] }>(`/modules/mine`),
-       apiClient.get<{ data: StudentData[] }>(`/students/school/${user.school_id}`),
-       user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
-     ]);
-     const currentSy = syRes.data.data;
-     const allClasses = classesRes.data.data || [];
-     setClasses(currentSy ? allClasses.filter((c: ClassData) => c.school_year_id === currentSy.id) : allClasses);
-     setModules(modulesRes.data.data || []);
-        setStudents(studentsRes.data.data || []);
+        const data = await fetchFacultyDashboardData(user.id, schoolId);
+        setClasses(data.classes);
+        setModules(data.modules);
+        setStudents(data.students);
       } catch {
         // silently fail
       } finally {
@@ -69,8 +48,8 @@ export default function FacultyDashboard() {
         return;
       }
       try {
-        const summaryRes = await attendanceApi.getFacultySummary();
-        setAttendanceSummary(summaryRes.data.data);
+        const summary = await fetchFacultyAttendanceSummary();
+        setAttendanceSummary(summary);
       } catch {
         setAttendanceSummary(null);
       } finally {

@@ -1,29 +1,36 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
-import { classApi, type ClassListItem } from "../../api/classes";
-import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
-import { studentApi, type StudentListItem, type AcademicRecordYear, type AcademicRecordSubject } from "../../api/students";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
-import { getApiErrorMessage } from "../../api/client";
+import {
+  fetchSchoolYearsWithAutoGenerate,
+  fetchEnrollmentBaseData,
+  fetchClassEnrollments,
+  fetchPreviousGrades,
+  fetchClassSubjects,
+  enrollStudent,
+  updateEnrollmentStatus,
+  deleteEnrollment,
+  filterSearchResults,
+  filterEligibleClasses,
+  formatGrade,
+  averageGrade,
+  initials,
+  avatarClass,
+  STATUS_LABELS,
+  getApiErrorMessage,
+  type ClassListItem,
+  type EnrollmentListItem,
+  type StudentListItem,
+  type AcademicRecordYear,
+  type SchoolYear,
+  type ClassSubject,
+} from "../../service/school_admin/manageEnrollmentsService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-
-interface ClassSubject {
-  id: string;
-  name: string;
-  teacher_name: string | null;
-}
-
-const STATUS_LABELS: Record<EnrollmentListItem["status"], string> = {
-  active: "Active",
-  dropped: "Dropped",
-  completed: "Completed",
-};
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -32,31 +39,6 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => clearTimeout(timer);
   }, [value, delay]);
   return debouncedValue;
-}
-
-function formatGrade(value: number | null): string {
-  if (value === null || value === undefined) return "—";
-  return Number(value).toFixed(2);
-}
-
-function averageGrade(subjects: AcademicRecordSubject[]): number | null {
-  const graded = subjects
-    .map(subj => subj.final_grade)
-    .filter((g): g is number => typeof g === "number");
-  return graded.length ? graded.reduce((a, b) => a + b, 0) / graded.length : null;
-}
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase() || "?";
-}
-
-const AVATAR_VARIANTS = ["enroll-avatar--1", "enroll-avatar--2", "enroll-avatar--3", "enroll-avatar--4", "enroll-avatar--5", "enroll-avatar--6"];
-function avatarClass(name: string): string {
-  const sum = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return AVATAR_VARIANTS[sum % AVATAR_VARIANTS.length];
 }
 
 export default function ManageEnrollments() {
@@ -109,12 +91,9 @@ export default function ManageEnrollments() {
   const loadSchoolYears = useCallback(async () => {
     if (!schoolId) return;
     try {
-      await schoolYearApi.autoGenerate(schoolId);
-      const res = await schoolYearApi.getBySchoolId(schoolId);
-      const syList = res.data.data || [];
-      setSchoolYears(syList);
-      const current = syList.find((s: SchoolYear) => s.is_current === 1);
-      if (current) setSelectedSYId(current.id);
+      const data = await fetchSchoolYearsWithAutoGenerate(schoolId);
+      setSchoolYears(data.schoolYears);
+      if (data.currentYearId) setSelectedSYId(data.currentYearId);
     } catch {
       setToast({ message: "Failed to load school years", type: "error" });
     }
@@ -123,12 +102,9 @@ export default function ManageEnrollments() {
   const loadBaseData = useCallback(async () => {
     if (!schoolId) return;
     try {
-      const [studentsRes, classesRes] = await Promise.all([
-        studentApi.getAll(schoolId),
-        classApi.getBySchoolId(schoolId),
-      ]);
-      setAllStudents(studentsRes.data.data || []);
-      setAllClasses(classesRes.data.data || []);
+      const data = await fetchEnrollmentBaseData(schoolId);
+      setAllStudents(data.allStudents);
+      setAllClasses(data.allClasses);
     } catch {
       setToast({ message: "Failed to load data", type: "error" });
     } finally {
@@ -141,8 +117,8 @@ export default function ManageEnrollments() {
   // Load enrollments when school year or class changes
   useEffect(() => {
     if (!selectedClass || !selectedSYId) { setEnrollments([]); return; }
-    enrollmentApi.getByClassAndSchoolYear(selectedClass.id, selectedSYId)
-      .then(res => setEnrollments(res.data.data || []))
+    fetchClassEnrollments(selectedClass.id, selectedSYId)
+      .then(records => setEnrollments(records))
       .catch(() => setToast({ message: "Failed to load enrollments", type: "error" }));
   }, [selectedClass, selectedSYId]);
 
@@ -152,14 +128,7 @@ export default function ManageEnrollments() {
     setPrevYearLoading(true);
     setPrevYearError(null);
     try {
-      const res = await studentApi.getAcademicRecord(studentId, "all");
-      const records = res.data.data?.records ?? [];
-      const previous = records
-        .filter((r) => r.school_year.id !== excludeSchoolYearId)
-        .sort((a, b) =>
-          (b.school_year.start_date ?? "").localeCompare(a.school_year.start_date ?? "") ||
-          b.school_year.id - a.school_year.id
-        );
+      const previous = await fetchPreviousGrades(studentId, excludeSchoolYearId);
       setPrevYearRecords(previous);
       // Open the most recent year by default; older years stay collapsed.
       setExpandedPrevYears(previous.length > 0 ? [previous[0].school_year.id] : []);
@@ -184,11 +153,8 @@ export default function ManageEnrollments() {
   // Load subjects when class changes
   useEffect(() => {
     if (!selectedClass) { setClassSubjects([]); return; }
-    classApi.getFaculties(selectedClass.id)
-      .then(res => {
-        const subs = (res.data.data || [])
-          .filter((f: any) => f.subject_id && f.subject_name)
-          .map((f: any) => ({ id: f.subject_id, name: f.subject_name, teacher_name: `${f.first_name} ${f.last_name}` }));
+    fetchClassSubjects(selectedClass.id)
+      .then(subs => {
         setClassSubjects(subs);
         setSelectedSubjectIds(subs.map((s: ClassSubject) => s.id));
       })
@@ -209,17 +175,14 @@ export default function ManageEnrollments() {
 
   // Filter students by debounced search
   const isSearching = studentSearch.trim() !== debouncedSearch.trim();
-  const searchResults = debouncedSearch.trim()
-    ? allStudents.filter(s =>
-        `${s.first_name} ${s.last_name}`.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        s.email.toLowerCase().includes(debouncedSearch.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  const searchResults = useMemo(() => {
+    return filterSearchResults(allStudents, debouncedSearch);
+  }, [allStudents, debouncedSearch]);
   const dropdownOpen = studentSearch.trim().length > 0 && !selectedStudent;
 
-  const eligibleClasses = selectedGradeLevel !== null
-    ? allClasses.filter(c => c.grade_level === null || c.grade_level === String(selectedGradeLevel))
-    : [];
+  const eligibleClasses = useMemo(() => {
+    return filterEligibleClasses(allClasses, selectedGradeLevel);
+  }, [allClasses, selectedGradeLevel]);
 
   const toggleSubject = (id: string) => {
     setSelectedSubjectIds(prev =>
@@ -257,7 +220,7 @@ export default function ManageEnrollments() {
     if (!selectedStudent || !selectedClass || !selectedSYId || selectedGradeLevel === null) return;
     setSubmitting(true);
     try {
-      await enrollmentApi.create({
+      await enrollStudent({
         student_id: selectedStudent.id,
         class_id: selectedClass.id,
         school_year_id: selectedSYId,
@@ -265,18 +228,16 @@ export default function ManageEnrollments() {
         subject_ids: selectedSubjectIds,
       });
       setToast({ message: `${selectedStudent.first_name} enrolled in ${selectedClass.class_name}`, type: "success" });
+      const targetClassId = selectedClass.id;
       setSelectedStudent(null);
       setStudentSearch("");
       setSelectedGradeLevel(null);
       setSelectedClass(null);
       setSelectedSubjectIds([]);
-      const res = await enrollmentApi.getByClassAndSchoolYear(selectedClass.id, selectedSYId);
-      setEnrollments(res.data.data || []);
+      const records = await fetchClassEnrollments(targetClassId, selectedSYId);
+      setEnrollments(records);
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to enroll student"
-        : "Failed to enroll student";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to enroll student"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -285,8 +246,8 @@ export default function ManageEnrollments() {
   const refreshEnrollments = useCallback(async () => {
     if (!selectedClass || !selectedSYId) return;
     try {
-      const res = await enrollmentApi.getByClassAndSchoolYear(selectedClass.id, selectedSYId);
-      setEnrollments(res.data.data || []);
+      const records = await fetchClassEnrollments(selectedClass.id, selectedSYId);
+      setEnrollments(records);
     } catch {
       /* keep current list on failure */
     }
@@ -294,7 +255,7 @@ export default function ManageEnrollments() {
 
   const handleStatusChange = async (enrollmentId: string, status: EnrollmentListItem["status"]) => {
     try {
-      await enrollmentApi.updateStatus(enrollmentId, { status });
+      await updateEnrollmentStatus(enrollmentId, status);
       setToast({ message: "Status updated", type: "success" });
       refreshEnrollments();
     } catch {
@@ -305,7 +266,7 @@ export default function ManageEnrollments() {
   const handleRemove = async (enrollmentId: string) => {
     if (!confirm("Remove this enrollment?")) return;
     try {
-      await enrollmentApi.delete(enrollmentId);
+      await deleteEnrollment(enrollmentId);
       setToast({ message: "Enrollment removed", type: "success" });
       refreshEnrollments();
     } catch {

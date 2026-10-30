@@ -2,35 +2,31 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useFeatures } from "../../context/FeaturesContext";
-import { studentApi } from "../../api/students";
-import type { StudentListItem, StudentPayload, StudentUpdatePayload, ImportResult, ImportPreview } from "../../api/students";
+import {
+  fetchStudents as apiFetchStudents,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  previewStudentImport,
+  executeStudentImport,
+  validateStudentImportFile,
+  filterStudents,
+  generateFailedRowsCsv,
+  getStudentImportTemplateCsv,
+  getApiErrorMessage,
+  emptyStudentForm,
+  type StudentListItem,
+  type StudentUpdatePayload,
+  type ImportResult,
+  type ImportPreview,
+  type SexFilter,
+} from "../../service/school_admin/manageStudentsService";
 
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-type SexFilter = "all" | "male" | "female";
-
-const emptyCreate: StudentPayload = {
-  first_name: "",
-  middle_name: "",
-  last_name: "",
-  extension_name: "",
-  email: "",
-  school_id: 0,
-  lrn: "",
-  date_of_birth: null,
-  place_of_birth: "",
-  sex: "male",
-  nationality: "Filipino",
-  contact_number: "",
-  region: "",
-  province: "",
-  city_municipality: "",
-  barangay: "",
-  purok_street: "",
-};
 
 export default function ManageStudents() {
   const { user } = useAuth();
@@ -52,7 +48,7 @@ export default function ManageStudents() {
   // list filters
   const [search, setSearch] = useState("");
   const [sexFilter, setSexFilter] = useState<SexFilter>("all");
-  const [createForm, setCreateForm] = useState(emptyCreate);
+  const [createForm, setCreateForm] = useState(emptyStudentForm);
   const [editForm, setEditForm] = useState<StudentUpdatePayload>({});
   const [submitting, setSubmitting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -66,11 +62,11 @@ export default function ManageStudents() {
 
   const schoolId = user?.school_id ?? 0;
 
-  const fetchStudents = useCallback(async () => {
+  const loadStudents = useCallback(async () => {
     if (!schoolId) return;
     try {
-      const { data } = await studentApi.getAll(schoolId);
-      setStudents(data.data || []);
+      const data = await apiFetchStudents(schoolId);
+      setStudents(data);
     } catch {
       setToast({ message: "Failed to load students", type: "error" });
     } finally {
@@ -78,7 +74,7 @@ export default function ManageStudents() {
     }
   }, [schoolId]);
 
-  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+  useEffect(() => { loadStudents(); }, [loadStudents]);
 
   // ---------- CREATE ----------
   const handleCreate = async (e: React.FormEvent) => {
@@ -86,19 +82,16 @@ export default function ManageStudents() {
     if (!user?.school_id || !user?.id) return;
     setSubmitting(true);
     try {
-      await studentApi.create({
+      await createStudent({
         ...createForm,
         school_id: user.school_id,
       });
       setToast({ message: "Student created successfully", type: "success" });
       setShowCreate(false);
-      setCreateForm(emptyCreate);
-      fetchStudents();
+      setCreateForm(emptyStudentForm);
+      loadStudents();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create student"
-        : "Failed to create student";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to create student"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -133,16 +126,13 @@ export default function ManageStudents() {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await studentApi.update(editing.id, editForm);
+      await updateStudent(editing.id, editForm);
       setToast({ message: "Student updated successfully", type: "success" });
       setShowEdit(false);
       setEditing(null);
-      fetchStudents();
+      loadStudents();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update student"
-        : "Failed to update student";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to update student"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -152,9 +142,9 @@ export default function ManageStudents() {
   const handleDelete = async (s: StudentListItem) => {
     if (!confirm(`Delete ${s.first_name} ${s.last_name}?`)) return;
     try {
-      await studentApi.delete(s.id);
+      await deleteStudent(s.id);
       setToast({ message: "Student deleted", type: "success" });
-      fetchStudents();
+      loadStudents();
     } catch {
       setToast({ message: "Failed to delete student", type: "error" });
     }
@@ -164,17 +154,9 @@ export default function ManageStudents() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const validateAndPreviewFile = async (file: File) => {
-    const allowedTypes = [
-      "text/csv",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      setToast({ message: "Invalid file type. Use CSV or Excel.", type: "error" });
-      return false;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setToast({ message: "File too large. Max size is 5MB.", type: "error" });
+    const validation = validateStudentImportFile(file);
+    if (!validation.valid) {
+      setToast({ message: validation.error || "Invalid file", type: "error" });
       return false;
     }
 
@@ -183,14 +165,11 @@ export default function ManageStudents() {
     setPreviewLoading(true);
 
     try {
-      const { data } = await studentApi.importPreview(file);
-      setImportPreviewData(data.data);
+      const preview = await previewStudentImport(file);
+      setImportPreviewData(preview);
       setFileSelected(true);
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to preview import"
-        : "Failed to preview import";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to preview import"), type: "error" });
     } finally {
       setPreviewLoading(false);
     }
@@ -234,23 +213,20 @@ export default function ManageStudents() {
     }, 300);
 
     try {
-      const { data } = await studentApi.import(importFile);
+      const result = await executeStudentImport(importFile);
       clearInterval(progressInterval);
       setImportProgress(100);
-      setImportResult(data.data);
-      setToast({ message: `Import completed: ${data.data.success} success, ${data.data.failed} failed`, type: data.data.failed > 0 ? "error" : "success" });
+      setImportResult(result);
+      setToast({ message: `Import completed: ${result.success} success, ${result.failed} failed`, type: result.failed > 0 ? "error" : "success" });
       setFileSelected(false);
       setImportPreviewData(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setImportFile(null);
-      fetchStudents();
+      loadStudents();
     } catch (err: unknown) {
       clearInterval(progressInterval);
       setImportProgress(0);
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to import students"
-        : "Failed to import students";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to import students"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -258,16 +234,7 @@ export default function ManageStudents() {
 
   const downloadFailedRows = () => {
     if (!importResult || importResult.errors.length === 0) return;
-    const headers = ["Row", "Email", "Error", "Field", "Value", "Expected"];
-    const rows = importResult.errors.map(e => [
-      e.row,
-      e.email || "",
-      e.error,
-      e.field || "",
-      e.value || "",
-      e.expected || ""
-    ]);
-    const csvContent = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csvContent = generateFailedRowsCsv(importResult.errors);
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -278,7 +245,7 @@ export default function ManageStudents() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = "first_name,middle_name,last_name,extension_name,email,lrn,date_of_birth,place_of_birth,sex,nationality,contact_number,region,province,city_municipality,barangay,purok_street\nJohn,Michael,Doe,Jr.,john@example.com,123456789012,2010-05-15,Manila,male,Filipino,555-0101,NCR,Manila,Manila,Barangay 1,Purok 1\nJane,Anne,Smith,,jane@example.com,123456789013,2009-08-22,Quezon City,female,Filipino,555-0102,NCR,Quezon City,Quezon City,Barangay 2,Purok 2";
+    const csvContent = getStudentImportTemplateCsv();
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -294,21 +261,7 @@ export default function ManageStudents() {
   };
 
   const filteredStudents = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return students.filter((s) => {
-      if (sexFilter !== "all" && s.sex !== sexFilter) return false;
-      if (!query) return true;
-      const name = [s.first_name, s.middle_name, s.last_name, s.extension_name]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return (
-        name.includes(query) ||
-        (s.email ?? "").toLowerCase().includes(query) ||
-        (s.lrn ?? "").toLowerCase().includes(query) ||
-        (s.contact_number ?? "").toLowerCase().includes(query)
-      );
-    });
+    return filterStudents(students, search, sexFilter);
   }, [students, search, sexFilter]);
 
   const filtersActive = search.trim() !== "" || sexFilter !== "all";
@@ -326,7 +279,7 @@ export default function ManageStudents() {
         </div>
         {canManage && (
           <div style={{ display: "flex", gap: "8px" }}>
-            <button className="mgmt-btn mgmt-btn--primary" onClick={() => { setCreateForm(emptyCreate); setShowCreate(true); }}>
+            <button className="mgmt-btn mgmt-btn--primary" onClick={() => { setCreateForm(emptyStudentForm); setShowCreate(true); }}>
               + Add Student
             </button>
             <button className="mgmt-btn mgmt-btn--secondary" onClick={() => { setImportFile(null); setFileSelected(false); setImportPreviewData(null); setImportResult(null); setShowImport(true); }}>

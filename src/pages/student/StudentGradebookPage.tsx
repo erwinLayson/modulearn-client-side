@@ -1,13 +1,19 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { gradebookApi, type StudentSubjectGradeSummary } from "../../api/gradebook";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
-import { resolveCurrentPeriodId } from "../../api/academicPeriods";
+import {
+  fetchCurrentSchoolYear,
+  resolveDefaultPeriod,
+  fetchStudentGradeSummary,
+  parseItemDate as parseDate,
+  PASS_THRESHOLD,
+  GRADE_CATEGORY_ORDER as CATEGORY_ORDER,
+  type StudentSubjectGradeSummary,
+  type SchoolYear,
+} from "../../service/student/studentGradebookService";
 import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
-const CATEGORY_ORDER = ["activities", "quizzes", "exams"] as const;
 const CATEGORY_LABELS: Record<string, string> = {
   activities: "ACT",
   quizzes: "QUIZ",
@@ -18,28 +24,12 @@ const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
   quizzes: { bg: COLORS.catQuizzesBg, fg: COLORS.catQuizzesFg },
   exams: { bg: COLORS.catExamsBg, fg: COLORS.catExamsFg },
 };
-const PASS_THRESHOLD = 75;
 
 function getGradeColor(grade: number): string {
   if (grade >= 90) return COLORS.gradeExcellent;
   if (grade >= 75) return COLORS.gradeGood;
   if (grade >= 60) return COLORS.gradeFair;
   return COLORS.gradePoor;
-}
-
-function parseDate(dateVal: unknown): string | null {
-  if (!dateVal) return null;
-  if (typeof dateVal === "string") {
-    const match = dateVal.match(/^\d{4}-\d{2}-\d{2}/);
-    if (match) return match[0];
-    const d = new Date(dateVal);
-    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-    return null;
-  }
-  if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
-    return dateVal.toISOString().slice(0, 10);
-  }
-  return null;
 }
 
 function formatDateShort(dateStr: string): string {
@@ -101,7 +91,7 @@ export default function StudentGradebookPage() {
     const schoolId = user.school_id;
     let cancelled = false;
     (async () => {
-      const periodId = await resolveCurrentPeriodId(schoolId);
+      const periodId = await resolveDefaultPeriod(schoolId);
       if (cancelled) return;
       if (periodId !== null) {
         setSelectedPeriod(String(periodId));
@@ -118,15 +108,15 @@ export default function StudentGradebookPage() {
     if (!user || !periodResolved) return;
     try {
       if (user.school_id) {
-        const syRes = await schoolYearApi.getCurrent(user.school_id);
-        setCurrentSchoolYear(syRes.data.data || null);
+        const sy = await fetchCurrentSchoolYear(user.school_id);
+        setCurrentSchoolYear(sy);
       }
       if (!selectedPeriod) {
         setSummary([]);
         return;
       }
-      const res = await gradebookApi.getStudentSummary(selectedPeriod);
-      setSummary(res.data.data || []);
+      const data = await fetchStudentGradeSummary(selectedPeriod);
+      setSummary(data);
     } catch {
       // silently fail
     } finally {

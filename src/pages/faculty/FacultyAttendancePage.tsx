@@ -1,30 +1,28 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { getApiErrorMessage } from "../../api/client";
 import {
-  classApi,
-  attendanceApi,
+  loadClassCards,
+  loadClassEnrollments,
+  loadAttendanceSpreadsheet,
+  loadHistorySpreadsheet,
+  createAttendanceSession,
+  saveAttendanceEdits,
+  getRate,
+  rateColor,
+  getAttendanceEditKey as editKey,
+  getTodayDateString,
+  getApiErrorMessage,
   type FacultyClassAssignment,
   type AttendanceStatus,
-  type AttendanceHistoryItem,
-} from "../../api/classes";
-import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+  type EnrollmentListItem,
+  type SchoolYear,
+  type ClassCardData,
+} from "../../service/faculty/facultyAttendanceService";
 import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-
-interface ClassCardData {
-  assignment: FacultyClassAssignment;
-  sessionCount: number;
-  todayRecorded: number;
-  todayPending: number;
-}
-
-function getRate(p: number, t: number) { return t > 0 ? Math.round((p / t) * 100) : 0; }
-function rateColor(r: number) { return r >= 75 ? COLORS.present : r >= 50 ? COLORS.warning : COLORS.error; }
 
 function LoadError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) {
   return (
@@ -80,48 +78,16 @@ export default function FacultyAttendancePage() {
   const [currentSchoolYear, setCurrentSchoolYear] = useState<SchoolYear | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("");
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayDateString();
 
-  const editKey = (studentId: string, date: string, subjectId: string) => `${studentId}::${date}::${subjectId}`;
-
-  const loadClassCards = useCallback(async () => {
+  const loadClassCardsData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setCardsError(null);
     try {
-      const [res, syRes] = await Promise.all([
-        classApi.getAssignedClasses(user.id),
-        user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
-      ]);
-      const currentSy = syRes.data.data || null;
-      setCurrentSchoolYear(currentSy);
-      const assignments = (res.data.data || []).filter((a: FacultyClassAssignment) => (currentSy ? a.school_year_id === currentSy.id : true));
-      const periodParam = selectedPeriod ? Number(selectedPeriod) : undefined;
-      const todayRes = await attendanceApi.getHistory({ date_from: today, date_to: today, limit: 200, ...(periodParam ? { period_id: periodParam } : {}) });
-      const todayHistory: AttendanceHistoryItem[] = todayRes.data.data?.data || [];
-      const todayMap = new Map<string, AttendanceHistoryItem>();
-      for (const h of todayHistory) todayMap.set(`${h.class_id}::${h.subject_id}`, h);
-
-      const allHistoryRes = await attendanceApi.getHistory({ limit: 500, ...(periodParam ? { period_id: periodParam } : {}) });
-      const allHistory: AttendanceHistoryItem[] = allHistoryRes.data.data?.data || [];
-      const sessionCountMap = new Map<string, Set<string>>();
-      for (const h of allHistory) {
-        const key = h.class_id;
-        if (!sessionCountMap.has(key)) sessionCountMap.set(key, new Set());
-        sessionCountMap.get(key)!.add(`${h.subject_id}::${h.attendance_date}`);
-      }
-
-      const cards: ClassCardData[] = assignments.map(a => {
-        const recorded = (a.subjects || []).filter(s => todayMap.has(`${a.id}::${s.id}`)).length;
-        const pending = (a.subjects || []).length - recorded;
-        return {
-          assignment: a,
-          sessionCount: sessionCountMap.get(a.id)?.size || 0,
-          todayRecorded: recorded,
-          todayPending: pending,
-        };
-      });
-      setClassCards(cards);
+      const result = await loadClassCards(user.id, user.school_id ?? null, selectedPeriod, today);
+      setCurrentSchoolYear(result.currentSchoolYear);
+      setClassCards(result.cards);
     } catch (err) {
       const message = getApiErrorMessage(err, "Failed to load your assigned classes");
       setCardsError(message);
@@ -131,19 +97,14 @@ export default function FacultyAttendancePage() {
     }
   }, [user, today, selectedPeriod]);
 
-  useEffect(() => { loadClassCards(); }, [loadClassCards]);
+  useEffect(() => { loadClassCardsData(); }, [loadClassCardsData]);
 
-  const loadClassEnrollments = useCallback(async (classId: string) => {
+  const loadClassEnrollmentsData = useCallback(async (classId: string) => {
+    if (!user?.school_id) return;
     setEnrollmentsError(null);
     try {
-      const syRes = await schoolYearApi.getCurrent(user!.school_id!);
-      const sy = syRes.data.data;
-      if (!sy) {
-        setClassEnrollments([]);
-        return;
-      }
-      const enrRes = await enrollmentApi.getByClassAndSchoolYear(classId, sy.id);
-      setClassEnrollments((enrRes.data.data || []).filter(e => e.status === "active"));
+      const enrollments = await loadClassEnrollments(user.school_id, classId);
+      setClassEnrollments(enrollments);
     } catch (err) {
       const message = getApiErrorMessage(err, "Failed to load the class roster");
       setEnrollmentsError(message);
@@ -162,67 +123,31 @@ export default function FacultyAttendancePage() {
     setHistDateTo("");
     setAttSubjectFilter("");
 
-    await loadClassEnrollments(assignment.id);
-  }, [loadClassEnrollments]);
+    await loadClassEnrollmentsData(assignment.id);
+  }, [loadClassEnrollmentsData]);
 
-  const loadAttendanceSpreadsheet = useCallback(async () => {
+  const loadAttendanceSpreadsheetData = useCallback(async () => {
     if (!selectedClass) return;
     setAttLoading(true);
     setAttError(null);
     try {
-      const periodParam = selectedPeriod || undefined;
-      const [sessRes, histRes] = await Promise.all([
-        classApi.getClassSessions(selectedClass.id, periodParam),
-        attendanceApi.getHistory({ class_id: selectedClass.id, limit: 200, ...(selectedPeriod ? { period_id: Number(selectedPeriod) } : {}) }),
-      ]);
-      const apiSessions: { attendance_date: string; subject_id: string }[] = sessRes.data.data || [];
-      const history: AttendanceHistoryItem[] = histRes.data.data?.data || [];
-
-      const sessionMap = new Map<string, { date: string; subject_id: string; subject_name: string }>();
-      for (const s of apiSessions) {
-        const dateOnly = s.attendance_date.slice(0, 10);
-        const key = `${dateOnly}::${s.subject_id}`;
-        if (!sessionMap.has(key)) {
-          const subjectName = (selectedClass.subjects || []).find(x => x.id === s.subject_id)?.name || "Subject";
-          sessionMap.set(key, { date: dateOnly, subject_id: s.subject_id, subject_name: subjectName });
-        }
-      }
-      for (const h of history) {
-        const dateOnly = h.attendance_date.slice(0, 10);
-        const key = `${dateOnly}::${h.subject_id}`;
-        if (!sessionMap.has(key)) sessionMap.set(key, { date: dateOnly, subject_id: h.subject_id, subject_name: h.subject_name });
-      }
-      const sortedSessions = [...sessionMap.values()].sort((a, b) => {
-        const dateCmp = new Date(a.date).getTime() - new Date(b.date).getTime();
-        return dateCmp !== 0 ? dateCmp : a.subject_name.localeCompare(b.subject_name);
-      });
-
-      const sessionStatuses: { date: string; subject_id: string; subject_name: string; statuses: Record<string, AttendanceStatus> }[] = [];
-      for (const sess of sortedSessions) {
-        try {
-          const attRes = await classApi.getAttendance(selectedClass.id, sess.date, sess.subject_id);
-          const statuses: Record<string, AttendanceStatus> = {};
-          for (const r of attRes.data.data || []) statuses[r.student_id] = r.status;
-          sessionStatuses.push({ date: sess.date, subject_id: sess.subject_id, subject_name: sess.subject_name, statuses });
-        } catch { sessionStatuses.push({ date: sess.date, subject_id: sess.subject_id, subject_name: sess.subject_name, statuses: {} }); }
-      }
-
-      const students = classEnrollments.map(e => ({ student_id: e.student_id, student_name: e.student_name, lrn: e.lrn ?? null }));
-      setAttSessions(sessionStatuses);
-      setAttStudents(students);
+      const result = await loadAttendanceSpreadsheet(selectedClass, classEnrollments, selectedPeriod);
+      setAttSessions(result.sessions);
+      setAttStudents(result.students);
     } catch (err) {
       const message = getApiErrorMessage(err, "Failed to load the attendance spreadsheet");
       setAttError(message);
       setToast({ message, type: "error" });
+    } finally {
+      setAttLoading(false);
     }
-    finally { setAttLoading(false); }
   }, [selectedClass, classEnrollments, selectedPeriod]);
 
   useEffect(() => {
     if (activeTab === "attendance" && selectedClass) {
-      loadAttendanceSpreadsheet();
+      loadAttendanceSpreadsheetData();
     }
-  }, [activeTab, selectedClass, loadAttendanceSpreadsheet]);
+  }, [activeTab, selectedClass, loadAttendanceSpreadsheetData]);
 
   const openCreateSession = useCallback(() => {
     setShowCreateModal(true);
@@ -244,20 +169,19 @@ export default function FacultyAttendancePage() {
     }
 
     try {
-      await classApi.createAttendanceSession({
-        class_id: selectedClass.id,
-        subject_id: createSubjectId,
+      await createAttendanceSession({
+        classId: selectedClass.id,
+        subjectId: createSubjectId,
         date: createDate,
-        period_id: Number(createPeriodId),
+        periodId: createPeriodId,
       });
       setShowCreateModal(false);
       setToast({ message: "Session created — mark attendance, then click Save Attendance", type: "success" });
-      await loadAttendanceSpreadsheet();
+      await loadAttendanceSpreadsheetData();
     } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to create attendance session";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to create attendance session"), type: "error" });
     }
-  }, [selectedClass, createSubjectId, createDate, createPeriodId, classEnrollments, attSessions, loadAttendanceSpreadsheet]);
+  }, [selectedClass, createSubjectId, createDate, createPeriodId, classEnrollments, attSessions, loadAttendanceSpreadsheetData]);
 
   const handleEditCell = useCallback((studentId: string, date: string, subjectId: string, value: string) => {
     if (value !== "0" && value !== "1" && value !== "") return;
@@ -293,91 +217,46 @@ export default function FacultyAttendancePage() {
 
   const handleSaveAttendance = useCallback(async () => {
     if (!selectedClass) return;
-
-    const recordsToSave: { student_id: string; status: AttendanceStatus }[] = [];
-    const affectedSessions = new Map<string, string>();
-
-    for (const [key, status] of pendingEdits) {
-      const [studentId, date, subjectId] = key.split("::");
-      recordsToSave.push({ student_id: studentId, status });
-      affectedSessions.set(`${date}::${subjectId}`, date);
-    }
-
-    if (recordsToSave.length === 0) return;
+    if (pendingEdits.size === 0) return;
 
     setSaving(true);
     try {
-      for (const [sessionKey, date] of affectedSessions) {
-        const [, subjectId] = sessionKey.split("::");
-        const sessionRecords = recordsToSave.filter(r => {
-          const k = editKey(r.student_id, date, subjectId);
-          return pendingEdits.has(k);
-        });
-        if (sessionRecords.length > 0) {
-          await classApi.editAttendance(selectedClass.id, {
-            records: sessionRecords,
-            date,
-            subject_id: subjectId,
-          });
-        }
-      }
-
+      await saveAttendanceEdits(selectedClass.id, pendingEdits);
       setPendingEdits(new Map());
       setHasUnsavedChanges(false);
       setToast({ message: "Attendance saved successfully", type: "success" });
-      await loadAttendanceSpreadsheet();
-    } catch (err: any) {
-      setToast({ message: err?.response?.data?.message || "Failed to save attendance", type: "error" });
-    } finally { setSaving(false); }
-  }, [selectedClass, pendingEdits, loadAttendanceSpreadsheet]);
+      await loadAttendanceSpreadsheetData();
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to save attendance"), type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedClass, pendingEdits, loadAttendanceSpreadsheetData]);
 
   const openHistorySpreadsheet = useCallback(async () => {
     if (!selectedClass) return;
     setSpreadLoading(true);
     setSpreadError(null);
     try {
-      const subjectFilter = histSubjectFilter || undefined;
-      const res = await attendanceApi.getHistory({
-        class_id: selectedClass.id,
-        subject_id: subjectFilter,
-        date_from: histDateFrom || undefined,
-        date_to: histDateTo || undefined,
-        limit: 200,
-        ...(selectedPeriod ? { period_id: Number(selectedPeriod) } : {}),
-      });
-      const sessions: AttendanceHistoryItem[] = res.data.data?.data || [];
-
-      const sessionMap = new Map<string, { date: string; subject_id: string; subject_name: string }>();
-      for (const s of sessions) {
-        const dateOnly = s.attendance_date.slice(0, 10);
-        const key = `${dateOnly}::${s.subject_id}`;
-        if (!sessionMap.has(key)) sessionMap.set(key, { date: dateOnly, subject_id: s.subject_id, subject_name: s.subject_name });
-      }
-      const sortedSessions = [...sessionMap.values()].sort((a, b) => {
-        const dateCmp = new Date(a.date).getTime() - new Date(b.date).getTime();
-        return dateCmp !== 0 ? dateCmp : a.subject_name.localeCompare(b.subject_name);
-      });
-
-      const sessionStatuses: { date: string; subject_id: string; subject_name: string; statuses: Record<string, AttendanceStatus> }[] = [];
-      for (const sess of sortedSessions) {
-        const dateOnly = sess.date.slice(0, 10);
-        try {
-          const attRes = await classApi.getAttendance(selectedClass.id, dateOnly, sess.subject_id);
-          const statuses: Record<string, AttendanceStatus> = {};
-          for (const r of attRes.data.data || []) statuses[r.student_id] = r.status;
-          sessionStatuses.push({ date: dateOnly, subject_id: sess.subject_id, subject_name: sess.subject_name, statuses });
-        } catch { sessionStatuses.push({ date: dateOnly, subject_id: sess.subject_id, subject_name: sess.subject_name, statuses: {} }); }
-      }
-
-      const students = classEnrollments.map(e => ({ student_id: e.student_id, student_name: e.student_name, lrn: e.lrn ?? null }));
-      setSpreadSessions(sessionStatuses);
-      setSpreadStudents(students);
+      const result = await loadHistorySpreadsheet(
+        selectedClass,
+        {
+          subjectId: histSubjectFilter,
+          dateFrom: histDateFrom,
+          dateTo: histDateTo,
+        },
+        classEnrollments,
+        selectedPeriod
+      );
+      setSpreadSessions(result.sessions);
+      setSpreadStudents(result.students);
     } catch (err) {
       const message = getApiErrorMessage(err, "Failed to load the attendance history spreadsheet");
       setSpreadError(message);
       setToast({ message, type: "error" });
+    } finally {
+      setSpreadLoading(false);
     }
-    finally { setSpreadLoading(false); }
   }, [selectedClass, histSubjectFilter, histDateFrom, histDateTo, classEnrollments, selectedPeriod]);
 
   useEffect(() => {
@@ -415,7 +294,7 @@ export default function FacultyAttendancePage() {
         {loading ? (
           <div className="mgmt-loading">Loading...</div>
         ) : cardsError ? (
-          <LoadError title="Couldn't load your assigned classes" message={cardsError} onRetry={loadClassCards} />
+          <LoadError title="Couldn't load your assigned classes" message={cardsError} onRetry={loadClassCardsData} />
         ) : classCards.length === 0 ? (
           <div className="mgmt-empty">No classes assigned to you.</div>
         ) : (
@@ -488,7 +367,7 @@ export default function FacultyAttendancePage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
           <button
             className="mgmt-btn mgmt-btn--ghost"
-            onClick={() => { setSelectedClass(null); setClassCards([]); loadClassCards(); }}
+            onClick={() => { setSelectedClass(null); setClassCards([]); loadClassCardsData(); }}
             style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "0.375rem" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
@@ -611,9 +490,9 @@ export default function FacultyAttendancePage() {
 
           {attLoading ? <div className="mgmt-loading" style={{ padding: "2rem" }}>Loading spreadsheet...</div>
           : attError ? (
-            <LoadError title="Couldn't load attendance" message={attError} onRetry={loadAttendanceSpreadsheet} />
+            <LoadError title="Couldn't load attendance" message={attError} onRetry={loadAttendanceSpreadsheetData} />
           ) : enrollmentsError ? (
-            <LoadError title="Couldn't load the class roster" message={enrollmentsError} onRetry={() => loadClassEnrollments(selectedClass.id)} />
+            <LoadError title="Couldn't load the class roster" message={enrollmentsError} onRetry={() => loadClassEnrollmentsData(selectedClass.id)} />
           ) : attSessions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ml-text-muted)" strokeWidth="1.5" style={{ margin: "0 auto 1rem" }}>
@@ -784,7 +663,7 @@ export default function FacultyAttendancePage() {
           : spreadError ? (
             <LoadError title="Couldn't load attendance history" message={spreadError} onRetry={openHistorySpreadsheet} />
           ) : enrollmentsError ? (
-            <LoadError title="Couldn't load the class roster" message={enrollmentsError} onRetry={() => loadClassEnrollments(selectedClass.id)} />
+            <LoadError title="Couldn't load the class roster" message={enrollmentsError} onRetry={() => loadClassEnrollmentsData(selectedClass.id)} />
           ) : spreadSessions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "3rem 2rem", background: "var(--ml-surface)", border: "1px solid var(--ml-border)", borderRadius: "0.75rem" }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ml-text-muted)" strokeWidth="1.5" style={{ margin: "0 auto 1rem" }}>

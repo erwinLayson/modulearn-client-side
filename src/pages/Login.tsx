@@ -2,15 +2,15 @@ import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BackHome from "../components/BackHome";
 import Toast from "../components/Toast";
-import { login as apiLogin } from "../api/auth";
-import apiClient from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { UserRole } from "../constant/users";
+import {
+  fetchSchools,
+  submitLogin,
+  getLoginErrorMessage,
+  type SchoolOption,
+} from "../service/loginService";
 
-interface SchoolOption {
-  school_id: number;
-  school_name: string;
-}
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,8 +30,8 @@ export default function Login() {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await apiClient.get<{ data: SchoolOption[] }>("/schools/list");
-        if (!cancelled) setSchools(data.data || []);
+        const schools = await fetchSchools();
+        if (!cancelled) setSchools(schools);
       } catch {
         // silently fail — school selector will be empty
       } finally {
@@ -48,32 +48,12 @@ export default function Login() {
     try {
       const payload: { email: string; password: string; school_id?: number } = { email, password };
       if (selectedSchoolId) payload.school_id = Number(selectedSchoolId);
-      const { data } = await apiLogin(payload);
-      if (data.isOk && data.data?.user) {
-        const backendUser = data.data.user;
-        const firstName = backendUser.first_name ?? "";
-        const lastName = backendUser.last_name ?? "";
-        const fullName = `${firstName} ${lastName}`.trim();
-        const displayName =
-          backendUser.name || fullName || backendUser.school_admin || backendUser.email || "";
-
-        authLogin({
-          id: backendUser.id,
-          name: displayName,
-          email: backendUser.email,
-          role: backendUser.role as UserRole,
-          school_id: backendUser.school_id,
-          school_name: backendUser.school_name as string | undefined,
-          academic_config_completed: backendUser.academic_config_completed as boolean | undefined,
-        });
-        setToast({ message: "Login successful! Redirecting...", type: "success" });
-        setTimeout(() => navigate("/dashboard"), 1500);
-      }
+      const authUser = await submitLogin(payload);
+      authLogin(authUser);
+      setToast({ message: "Login successful! Redirecting...", type: "success" });
+      setTimeout(() => navigate("/dashboard"), 1500);
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Login failed. Please try again."
-          : "Login failed. Please try again.";
+      const msg = getLoginErrorMessage(err);
       setError(msg);
       setToast({ message: msg, type: "error" });
     } finally {

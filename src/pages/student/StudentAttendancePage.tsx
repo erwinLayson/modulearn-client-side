@@ -1,7 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { attendanceApi, type StudentSubjectAttendance, type StudentAttendanceRecord } from "../../api/classes";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import {
+  fetchStudentAttendanceSummary,
+  fetchStudentAttendanceRecords,
+  type StudentSubjectAttendance,
+  type StudentAttendanceRecord,
+  type SchoolYear,
+} from "../../service/student/studentAttendanceService";
 import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
@@ -41,16 +46,15 @@ export default function StudentAttendancePage() {
   const [selectedPeriod, setSelectedPeriod] = useState("");
 
   useEffect(() => {
-    if (!user?.school_id) return;
+    const schoolId = user?.school_id;
+    if (!schoolId) return;
     let cancelled = false;
     (async () => {
       try {
-        const syRes = await schoolYearApi.getCurrent(user.school_id!);
-        const sy = syRes.data.data;
-        if (cancelled || !sy) return;
-        setCurrentSchoolYear(sy);
-        const res = await attendanceApi.getStudentBySubject(sy.id);
-        if (!cancelled) setSubjects(res.data.data || []);
+        const data = await fetchStudentAttendanceSummary(schoolId);
+        if (cancelled) return;
+        setCurrentSchoolYear(data.currentSchoolYear);
+        setSubjects(data.subjects);
       } catch {
         if (!cancelled) setSubjects([]);
       } finally {
@@ -64,12 +68,14 @@ export default function StudentAttendancePage() {
     if (!user) return;
     setRecordsLoading(true);
     try {
-      const filters: { subject_id?: string; date_from?: string; date_to?: string; limit?: number } = { limit: 500 };
-      if (subjectFilter) filters.subject_id = subjectFilter;
-      if (dateFrom) filters.date_from = dateFrom;
-      if (dateTo) filters.date_to = dateTo;
-      const res = await attendanceApi.getAllStudentRecords(filters);
-      setRecords(res.data.data?.data || []);
+      const filters = {
+        limit: 500,
+        ...(subjectFilter ? { subject_id: subjectFilter } : {}),
+        ...(dateFrom ? { date_from: dateFrom } : {}),
+        ...(dateTo ? { date_to: dateTo } : {}),
+      };
+      const data = await fetchStudentAttendanceRecords(filters);
+      setRecords(data);
     } catch {
       setRecords([]);
     } finally {

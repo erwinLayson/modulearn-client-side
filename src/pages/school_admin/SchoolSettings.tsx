@@ -1,7 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { academicPeriodApi, type AcademicPeriod } from "../../api/academicPeriods";
-import apiClient from "../../api/client";
+import {
+  fetchSchoolSettingsData,
+  saveAcademicConfig,
+  generatePeriods,
+  fetchPeriods,
+  setCurrentPeriod,
+  updatePeriod,
+  deletePeriod,
+  getPeriodUpdateErrorMessage,
+  type AcademicPeriod,
+} from "../../service/school_admin/schoolSettingsService";
 import Toast from "../../components/Toast";
 import CredentialsSection from "../../components/CredentialsSection";
 
@@ -30,22 +39,12 @@ export default function SchoolSettings() {
   const fetchData = useCallback(async () => {
     if (!user?.school_id) return;
     try {
-      const [configRes, syRes] = await Promise.all([
-        apiClient.get<{ data: { academic_system: string; period_count: number; academic_config_completed: number } }>(`/schools/${user.school_id}/config`),
-        apiClient.get<{ data: { id: number; is_current: number }[] }>(`/school-years/school/${user.school_id}`),
-      ]);
-
-      const config = configRes.data.data;
-      setAcademicSystem(config.academic_system);
-      setPeriodCount(config.period_count);
-      setConfigCompleted(config.academic_config_completed === 1);
-
-      const currentSy = (syRes.data.data || []).find((sy: { is_current: number }) => sy.is_current === 1);
-      if (currentSy) {
-        setCurrentSchoolYearId(currentSy.id);
-        const periodsRes = await academicPeriodApi.getBySchoolAndYear(user.school_id, currentSy.id);
-        setPeriods(periodsRes.data.data || []);
-      }
+      const data = await fetchSchoolSettingsData(user.school_id);
+      setAcademicSystem(data.config.academic_system);
+      setPeriodCount(data.config.period_count);
+      setConfigCompleted(data.config.academic_config_completed);
+      setCurrentSchoolYearId(data.currentSchoolYearId);
+      setPeriods(data.periods);
     } catch {
       // silently fail
     } finally {
@@ -59,10 +58,7 @@ export default function SchoolSettings() {
     if (!user?.school_id) return;
     setSaving(true);
     try {
-      await apiClient.put(`/schools/${user.school_id}/config`, {
-        academic_system: academicSystem,
-        period_count: periodCount,
-      });
+      await saveAcademicConfig(user.school_id, academicSystem, periodCount);
       setConfigCompleted(true);
       setToast({ message: "Academic configuration saved successfully", type: "success" });
     } catch {
@@ -76,12 +72,12 @@ export default function SchoolSettings() {
     if (!currentSchoolYearId) return;
     setGenerating(true);
     try {
-      const { data } = await academicPeriodApi.generate(currentSchoolYearId);
-      setToast({ message: data.data.generated > 0 ? `Generated ${data.data.generated} period(s)` : "All periods already exist", type: "success" });
+      const res = await generatePeriods(currentSchoolYearId);
+      setToast({ message: res.generated > 0 ? `Generated ${res.generated} period(s)` : "All periods already exist", type: "success" });
       // Refresh periods
       if (user?.school_id) {
-        const periodsRes = await academicPeriodApi.getBySchoolAndYear(user.school_id, currentSchoolYearId);
-        setPeriods(periodsRes.data.data || []);
+        const refreshed = await fetchPeriods(user.school_id, currentSchoolYearId);
+        setPeriods(refreshed);
       }
     } catch {
       setToast({ message: "Failed to generate periods", type: "error" });
@@ -92,7 +88,7 @@ export default function SchoolSettings() {
 
   const handleSetCurrent = async (periodId: number) => {
     try {
-      await academicPeriodApi.setCurrent(periodId);
+      await setCurrentPeriod(periodId);
       setPeriods(prev => prev.map(p => ({ ...p, is_current: p.id === periodId ? 1 : 0 })));
       setToast({ message: "Current period updated", type: "success" });
     } catch {
@@ -111,32 +107,27 @@ export default function SchoolSettings() {
   const handleSavePeriod = async () => {
     if (!editingPeriod) return;
     try {
-      const { data } = await academicPeriodApi.update(editingPeriod, {
+      const updated = await updatePeriod(editingPeriod, {
         name: editName,
         start_date: editStartDate,
         end_date: editEndDate,
       });
-      setPeriods(prev => prev.map(p => p.id === editingPeriod ? { ...data.data } : p));
+      setPeriods(prev => prev.map(p => p.id === editingPeriod ? { ...updated } : p));
       setEditingPeriod(null);
       setToast({ message: "Period updated successfully", type: "success" });
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update period"
-        : "Failed to update period";
-      setEditWarning(msg);
+      setEditWarning(getPeriodUpdateErrorMessage(err));
     }
   };
 
   const handleDeletePeriod = async (periodId: number) => {
     if (!confirm("Are you sure you want to delete this period?")) return;
     try {
-      await academicPeriodApi.delete(periodId);
+      await deletePeriod(periodId);
       setPeriods(prev => prev.filter(p => p.id !== periodId));
       setToast({ message: "Period deleted", type: "success" });
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to delete period"
-        : "Failed to delete period";
+      const msg = getPeriodUpdateErrorMessage(err).replace("Failed to update period", "Failed to delete period");
       setToast({ message: msg, type: "error" });
     }
   };

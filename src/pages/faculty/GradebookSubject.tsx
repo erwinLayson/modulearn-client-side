@@ -1,40 +1,37 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { gradebookApi, type GradeItem, type GradesForSubjectResponse, type GradingCategory, type GradeItemCategory, type FinalizationRecord } from "../../api/gradebook";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
-import { resolveCurrentPeriodId } from "../../api/academicPeriods";
+import {
+  fetchCurrentSchoolYear,
+  fetchDefaultPeriodId,
+  fetchGradingWeights,
+  saveGradingWeights,
+  fetchSheetData,
+  fetchFinalizations,
+  createGradeItem,
+  updateGradeItem,
+  deleteGradeItem,
+  upsertGradeScores,
+  finalizePeriodGrades,
+  enrichStudents,
+  groupGradeItems,
+  getApiErrorMessage,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  PASS_THRESHOLD,
+  type GradeItem,
+  type GradesForSubjectResponse,
+  type GradeItemCategory,
+  type FinalizationRecord,
+  type SchoolYear,
+  type GradeSheetItem,
+  type EnrichedStudent,
+} from "../../service/faculty/gradebookSubjectService";
 import { useAuth } from "../../context/AuthContext";
-import { getApiErrorMessage } from "../../api/client";
 import PeriodSelector from "../../components/PeriodSelector";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-
-const CATEGORY_LABELS: Record<string, string> = {
-  activities: "Activities",
-  quizzes: "Quizzes",
-  exams: "Exams",
-  attendance: "Attendance",
-};
-
-const CATEGORY_ORDER: GradingCategory[] = ["activities", "quizzes", "exams", "attendance"];
-
-const PASS_THRESHOLD = 75;
-
-/** Item shape as returned inside GradesForSubjectResponse (subset of GradeItem). */
-type GradeSheetItem = GradesForSubjectResponse["items"][number];
-
-interface EnrichedStudent {
-  student_id: string;
-  student_name: string;
-  lrn: string | null;
-  attendance_rate: number;
-  final_grade: number | null;
-  categories: {
-    [key: string]: { earned: number; possible: number };
-  };
-}
 
 export default function GradebookSubject() {
   const { classId, subjectId } = useParams<{ classId: string; subjectId: string }>();
@@ -85,8 +82,8 @@ export default function GradebookSubject() {
     const schoolId = user?.school_id;
     if (!schoolId) return;
     let cancelled = false;
-    schoolYearApi.getCurrent(schoolId)
-      .then(res => { if (!cancelled) setCurrentSchoolYear(res.data.data || null); })
+    fetchCurrentSchoolYear(schoolId)
+      .then(sy => { if (!cancelled) setCurrentSchoolYear(sy); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [user?.school_id]);
@@ -98,7 +95,7 @@ export default function GradebookSubject() {
     const schoolId = user.school_id;
     let cancelled = false;
     (async () => {
-      const periodId = await resolveCurrentPeriodId(schoolId);
+      const periodId = await fetchDefaultPeriodId(schoolId);
       if (cancelled) return;
       if (periodId !== null) {
         setSelectedPeriod(String(periodId));
@@ -115,15 +112,9 @@ export default function GradebookSubject() {
   useEffect(() => {
     if (!classId || !subjectId) return;
     let cancelled = false;
-    gradebookApi.getWeights(classId, subjectId)
-      .then(res => {
+    fetchGradingWeights(classId, subjectId)
+      .then(wMap => {
         if (cancelled) return;
-        const w = res.data.data || [];
-        const wMap: Record<string, number> = {};
-        for (const cat of CATEGORY_ORDER) {
-          const found = w.find(x => x.category === cat);
-          wMap[cat] = found ? found.weight : 0;
-        }
         setEditWeights(wMap);
         setWeightsChanged(false);
       })
@@ -144,27 +135,10 @@ export default function GradebookSubject() {
         setScores({});
         return;
       }
-      const [itemsRes, gradesRes] = await Promise.all([
-        gradebookApi.getItems(classId, subjectId, undefined, selectedPeriod),
-        gradebookApi.getGrades(classId, subjectId, selectedPeriod),
-      ]);
-      setItems(itemsRes.data.data || []);
-      const gData = gradesRes.data.data || {
-        class: { id: classId, name: "", section: null, grade_level: null },
-        subject: { id: subjectId, name: null },
-        weights: [],
-        items: itemsRes.data.data || [],
-        students: [],
-      };
-      setGradeData(gData);
-      const initialScores: Record<string, string> = {};
-      for (const s of gData.students || []) {
-        for (const gi of s.items || []) {
-          const key = `${s.student_id}:${gi.id}`;
-          initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
-        }
-      }
-      setScores(initialScores);
+      const result = await fetchSheetData(classId, subjectId, selectedPeriod);
+      setItems(result.items);
+      setGradeData(result.gradeData);
+      setScores(result.initialScores);
     } catch {
       setToast({ message: "Failed to load gradebook data", type: "error" });
       setGradeData(prev => prev || {
@@ -182,8 +156,8 @@ export default function GradebookSubject() {
   const loadFinalizations = useCallback(async () => {
     if (!classId || !subjectId) return;
     try {
-      const res = await gradebookApi.getFinalizations(classId, subjectId);
-      setFinalizations(res.data.data || []);
+      const data = await fetchFinalizations(classId, subjectId);
+      setFinalizations(data);
     } catch {
       setFinalizations([]);
     }
@@ -200,37 +174,11 @@ export default function GradebookSubject() {
   );
 
   const groupedItems = useMemo(() => {
-    if (!gradeData) return {} as Record<GradeItemCategory, GradeSheetItem[]>;
-    const groups: Record<string, GradeSheetItem[]> = { activities: [], quizzes: [], exams: [] };
-    for (const item of gradeData.items) {
-      if (!groups[item.category]) groups[item.category] = [];
-      groups[item.category].push(item);
-    }
-    return groups;
+    return groupGradeItems(gradeData);
   }, [gradeData]);
 
   const enrichedStudents: EnrichedStudent[] = useMemo(() => {
-    if (!gradeData) return [];
-    return gradeData.students.map(s => {
-      const categories: Record<string, { earned: number; possible: number }> = {};
-      for (const cat of CATEGORY_ORDER) {
-        categories[cat] = { earned: 0, possible: 0 };
-      }
-      for (const gi of s.items) {
-        categories[gi.category].possible += Number(gi.max_score);
-        if (gi.score !== null && gi.score !== undefined) {
-          categories[gi.category].earned += Number(gi.score);
-        }
-      }
-      return {
-        student_id: s.student_id,
-        student_name: s.student_name,
-        lrn: s.lrn ?? null,
-        attendance_rate: s.attendance_rate,
-        final_grade: s.final_grade,
-        categories,
-      };
-    });
+    return enrichStudents(gradeData);
   }, [gradeData]);
 
   const handleSaveWeights = async () => {
@@ -242,13 +190,11 @@ export default function GradebookSubject() {
     }
     setWeightsSaving(true);
     try {
-      const weightArray = Object.entries(editWeights).map(([category, weight]) => ({ category, weight }));
-      await gradebookApi.updateWeights(classId, subjectId, weightArray);
+      await saveGradingWeights(classId, subjectId, editWeights);
       setWeightsChanged(false);
       setToast({ message: "Grading weights saved", type: "success" });
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to save weights";
-      setToast({ message: msg, type: "error" });
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to save weights"), type: "error" });
     } finally {
       setWeightsSaving(false);
     }
@@ -270,31 +216,12 @@ export default function GradebookSubject() {
     }
     setItemSaving(true);
     try {
-      await gradebookApi.createItem(classId, subjectId, {
-        category: itemForm.category,
-        title: itemForm.title.trim(),
-        max_score: itemForm.max_score,
-        due_date: itemForm.due_date || null,
-        period_id: Number(itemForm.period_id),
-      });
+      await createGradeItem(classId, subjectId, itemForm);
       setToast({ message: "Grade item created", type: "success" });
       closeItemModal();
-      const periodParam = selectedPeriod || undefined;
-      const itemsRes = await gradebookApi.getItems(classId, subjectId, undefined, periodParam);
-      setItems(itemsRes.data.data || []);
-      const gradesRes = await gradebookApi.getGrades(classId, subjectId, periodParam);
-      setGradeData(gradesRes.data.data);
-      const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data?.students || []) {
-        for (const gi of s.items || []) {
-          const key = `${s.student_id}:${gi.id}`;
-          initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
-        }
-      }
-      setScores(initialScores);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to create grade item";
-      setToast({ message: msg, type: "error" });
+      await fetchSheet();
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to create grade item"), type: "error" });
     } finally {
       setItemSaving(false);
     }
@@ -312,23 +239,12 @@ export default function GradebookSubject() {
     }
     setItemSaving(true);
     try {
-      await gradebookApi.updateItem(editingItem.id, {
-        title: itemForm.title.trim(),
-        category: itemForm.category,
-        max_score: itemForm.max_score,
-        due_date: itemForm.due_date || null,
-        period_id: Number(itemForm.period_id),
-      });
+      await updateGradeItem(editingItem.id, itemForm);
       setToast({ message: "Grade item updated", type: "success" });
       closeItemModal();
-      const periodParam = selectedPeriod || undefined;
-      const itemsRes = await gradebookApi.getItems(classId, subjectId!, undefined, periodParam);
-      setItems(itemsRes.data.data || []);
-      const gradesRes = await gradebookApi.getGrades(classId, subjectId!, periodParam);
-      setGradeData(gradesRes.data.data);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to update grade item";
-      setToast({ message: msg, type: "error" });
+      await fetchSheet();
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to update grade item"), type: "error" });
     } finally {
       setItemSaving(false);
     }
@@ -337,25 +253,12 @@ export default function GradebookSubject() {
   const handleDeleteItem = async (itemId: string) => {
     setDeleteConfirmId(null);
     try {
-      await gradebookApi.deleteItem(itemId);
+      await deleteGradeItem(itemId);
       setToast({ message: "Grade item deleted", type: "success" });
-      const periodParam = selectedPeriod || undefined;
-      const itemsRes = await gradebookApi.getItems(classId!, subjectId!, undefined, periodParam);
-      setItems(itemsRes.data.data || []);
-      const gradesRes = await gradebookApi.getGrades(classId!, subjectId!, periodParam);
-      setGradeData(gradesRes.data.data);
-      const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data?.students || []) {
-        for (const gi of s.items || []) {
-          const key = `${s.student_id}:${gi.id}`;
-          initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
-        }
-      }
-      setScores(initialScores);
+      await fetchSheet();
       setHasUnsavedChanges(false);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to delete grade item";
-      setToast({ message: msg, type: "error" });
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to delete grade item"), type: "error" });
     }
   };
 
@@ -425,23 +328,13 @@ export default function GradebookSubject() {
     setScoresSaving(true);
     try {
       for (const { itemId, grades } of changedGrades) {
-        await gradebookApi.upsertGrades(itemId, grades);
+        await upsertGradeScores(itemId, grades);
       }
       setToast({ message: "Grades saved successfully", type: "success" });
       setHasUnsavedChanges(false);
-      const gradesRes = await gradebookApi.getGrades(classId!, subjectId!, selectedPeriod || undefined);
-      setGradeData(gradesRes.data.data);
-      const initialScores: Record<string, string> = {};
-      for (const s of gradesRes.data.data?.students || []) {
-        for (const gi of s.items || []) {
-          const key = `${s.student_id}:${gi.id}`;
-          initialScores[key] = gi.score !== null && gi.score !== undefined ? String(gi.score) : "";
-        }
-      }
-      setScores(initialScores);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to save grades";
-      setToast({ message: msg, type: "error" });
+      await fetchSheet();
+    } catch (err: unknown) {
+      setToast({ message: getApiErrorMessage(err, "Failed to save grades"), type: "error" });
     } finally {
       setScoresSaving(false);
     }
@@ -451,12 +344,8 @@ export default function GradebookSubject() {
     if (!classId || !subjectId || !selectedPeriod) return;
     setFinalizing(true);
     try {
-      const res = await gradebookApi.finalizeGrades({
-        class_id: classId,
-        subject_id: subjectId,
-        period_id: Number(selectedPeriod),
-      });
-      setToast({ message: res.data.data?.message || "Grades finalized successfully", type: "success" });
+      const count = await finalizePeriodGrades(classId, subjectId, Number(selectedPeriod));
+      setToast({ message: `Grades finalized successfully (${count} student${count !== 1 ? "s" : ""})`, type: "success" });
       setShowFinalizeModal(false);
       await Promise.all([loadFinalizations(), fetchSheet()]);
     } catch (err) {

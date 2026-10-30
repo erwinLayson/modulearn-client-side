@@ -1,8 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { schoolApi, type SchoolListItem } from "../../api/schools";
-import { featureApi, type SchoolFeature } from "../../api/features";
-import { getApiErrorMessage } from "../../api/client";
+import {
+  fetchSchools as apiFetchSchools,
+  fetchFeatures as apiFetchFeatures,
+  saveFeatures as apiSaveFeatures,
+  getApiErrorMessage,
+  type SchoolListItem,
+  type SchoolFeature,
+} from "../../service/admin/manageSchoolsService";
 import type { FeatureKey } from "../../constant/features";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
@@ -30,8 +35,8 @@ export default function ManageSchools() {
 
   const fetchSchools = useCallback(async () => {
     try {
-      const { data } = await schoolApi.getAll();
-      setSchools(data.data || []);
+      const data = await apiFetchSchools();
+      setSchools(data);
     } catch {
       setToast({ message: "Failed to load schools", type: "error" });
     } finally {
@@ -44,11 +49,10 @@ export default function ManageSchools() {
   const loadFeatures = useCallback(async (schoolId: number) => {
     setFeaturesLoading(true);
     try {
-      const { data } = await featureApi.get(schoolId);
-      const features = data.data.features || [];
+      const features = await apiFetchFeatures(schoolId);
       setFeatureList(features);
       setFeatureBaseline(
-        Object.fromEntries(features.map((f) => [f.key, f.is_enabled]))
+        Object.fromEntries(features.map((f: SchoolFeature) => [f.key, f.is_enabled]))
       );
     } catch (err) {
       setFeatureList([]);
@@ -69,14 +73,13 @@ export default function ManageSchools() {
     if (!selectedSchool) return;
     setFeaturesSaving(true);
     try {
-      const { data } = await featureApi.update(
+      const features = await apiSaveFeatures(
         selectedSchool.school_id,
-        featureList.map((f) => ({ key: f.key, is_enabled: f.is_enabled }))
+        featureList
       );
-      const features = data.data.features || [];
       setFeatureList(features);
       setFeatureBaseline(
-        Object.fromEntries(features.map((f) => [f.key, f.is_enabled]))
+        Object.fromEntries(features.map((f: SchoolFeature) => [f.key, f.is_enabled]))
       );
       setToast({ message: "Feature settings saved", type: "success" });
     } catch (err) {

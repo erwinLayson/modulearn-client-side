@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { studentApi, type AcademicRecordResponse } from "../../api/students";
 import { useAuth } from "../../context/AuthContext";
+import {
+  fetchStudentAcademicRecord,
+  type AcademicRecordResponse,
+  type Scope,
+} from "../../service/school_admin/studentAcademicRecordService";
 import AcademicRecordSheet from "../../components/AcademicRecordSheet";
 import Toast from "../../components/Toast";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-type Scope = "current" | "all";
 
 export default function StudentAcademicRecordPage() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -25,8 +28,8 @@ export default function StudentAcademicRecordPage() {
     (async () => {
       if (!studentId) return;
       try {
-        const { data } = await studentApi.getAcademicRecord(studentId, scope);
-        if (!cancelled) setRecord(data.data);
+        const data = await fetchStudentAcademicRecord(studentId, scope);
+        if (!cancelled) setRecord(data);
       } catch {
         if (!cancelled) setToast({ message: "Failed to load academic record", type: "error" });
       } finally {

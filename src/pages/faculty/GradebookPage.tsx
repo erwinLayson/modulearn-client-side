@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { classApi, type FacultyClassAssignment } from "../../api/classes";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
+import {
+  fetchGradebookPageData,
+  type FacultyClassAssignment,
+  type SchoolYear,
+} from "../../service/faculty/gradebookService";
 import PeriodSelector from "../../components/PeriodSelector";
 import { COLORS } from "../../constant/colors";
 
@@ -28,14 +31,9 @@ export default function GradebookPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [classesRes, syRes] = await Promise.all([
-        classApi.getAssignedClasses(user.id),
-        user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
-      ]);
-      const currentSy = syRes.data.data || null;
-      const assignments = (classesRes.data.data || []).filter((a: FacultyClassAssignment) => (currentSy ? a.school_year_id === currentSy.id : true));
-      setAssignments(assignments);
-      setCurrentSchoolYear(currentSy);
+      const data = await fetchGradebookPageData(user.id, user.school_id);
+      setAssignments(data.assignments);
+      setCurrentSchoolYear(data.currentSchoolYear);
     } catch {
       // silently fail
     } finally {

@@ -1,23 +1,25 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { classApi, type ClassListItem } from "../../api/classes";
-import { schoolYearApi } from "../../api/school-years";
-import { academicPeriodApi, type AcademicPeriod } from "../../api/academicPeriods";
-import { gradebookApi, type FinalizationRecord } from "../../api/gradebook";
-import { getApiErrorMessage } from "../../api/client";
+import {
+  fetchClassesAndPeriods,
+  fetchSubjectsForClass,
+  fetchFinalizations,
+  finalizeGrades,
+  correctFinalization,
+  validateCorrectionGrade,
+  PASS_THRESHOLD,
+  getApiErrorMessage,
+  type ClassListItem,
+  type AcademicPeriod,
+  type FinalizationRecord,
+  type ClassSubject,
+} from "../../service/school_admin/finalizationsService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 import { COLORS } from "../../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-
-interface ClassSubject {
-  id: string;
-  name: string;
-}
-
-const PASS_THRESHOLD = 75;
 
 export default function FinalizationsPage() {
   const { user } = useAuth();
@@ -53,17 +55,10 @@ export default function FinalizationsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const syRes = await schoolYearApi.getCurrent(schoolId);
-        const currentYear = syRes.data.data;
-        const [classesRes, periodsRes] = await Promise.all([
-          classApi.getBySchoolId(schoolId, currentYear?.id),
-          currentYear
-            ? academicPeriodApi.getBySchoolAndYear(schoolId, currentYear.id)
-            : Promise.resolve({ data: { data: [] as AcademicPeriod[] } }),
-        ]);
+        const data = await fetchClassesAndPeriods(schoolId);
         if (cancelled) return;
-        setClasses(classesRes.data.data || []);
-        setPeriods(periodsRes.data.data || []);
+        setClasses(data.classes);
+        setPeriods(data.periods);
       } catch {
         if (!cancelled) setToast({ message: "Failed to load classes", type: "error" });
       } finally {
@@ -79,16 +74,8 @@ export default function FinalizationsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await classApi.getFaculties(selectedClass);
+        const subs = await fetchSubjectsForClass(selectedClass);
         if (cancelled) return;
-        const subs: ClassSubject[] = [];
-        const seen = new Set<string>();
-        for (const f of res.data.data || []) {
-          if (f.subject_id && f.subject_name && !seen.has(f.subject_id)) {
-            seen.add(f.subject_id);
-            subs.push({ id: f.subject_id, name: f.subject_name });
-          }
-        }
         setSubjects(subs);
         setSelectedSubject(subs.length > 0 ? subs[0].id : "");
       } catch {
@@ -108,8 +95,8 @@ export default function FinalizationsPage() {
     }
     setListLoading(true);
     try {
-      const res = await gradebookApi.getFinalizations(selectedClass, selectedSubject);
-      setFinalizations(res.data.data || []);
+      const records = await fetchFinalizations(selectedClass, selectedSubject);
+      setFinalizations(records);
     } catch (err) {
       setFinalizations([]);
       setToast({ message: getApiErrorMessage(err, "Failed to load finalizations"), type: "error" });
@@ -150,12 +137,11 @@ export default function FinalizationsPage() {
     }
     setFinalizing(true);
     try {
-      const res = await gradebookApi.finalizeGrades({
+      const count = await finalizeGrades({
         class_id: selectedClass,
         subject_id: selectedSubject,
         period_id: finalizeScope === "year-end" ? null : Number(finalizePeriodId),
       });
-      const count = res.data.data?.finalized_count ?? 0;
       setToast({ message: `Finalized ${count} grade${count !== 1 ? "s" : ""} successfully`, type: "success" });
       setShowFinalizeModal(false);
       await loadFinalizations();
@@ -178,16 +164,14 @@ export default function FinalizationsPage() {
       setToast({ message: "Correction reason is required", type: "error" });
       return;
     }
-    if (correctionGrade !== "") {
-      const num = Number(correctionGrade);
-      if (isNaN(num) || num < 0 || num > 100) {
-        setToast({ message: "Final grade must be between 0 and 100", type: "error" });
-        return;
-      }
+    const gradeError = validateCorrectionGrade(correctionGrade);
+    if (gradeError) {
+      setToast({ message: gradeError, type: "error" });
+      return;
     }
     setCorrectingSaving(true);
     try {
-      await gradebookApi.correctFinalization(correcting.id, {
+      await correctFinalization(correcting.id, {
         final_grade: correctionGrade === "" ? null : Number(correctionGrade),
         reason: correctionReason.trim(),
       });

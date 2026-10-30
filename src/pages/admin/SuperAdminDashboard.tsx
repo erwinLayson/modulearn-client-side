@@ -1,18 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import apiClient from "../../api/client";
-
-interface SchoolData {
-  id: string;
-  school_name: string;
-  school_id: number;
-  school_email: string;
-  school_level: number;
-  address: string;
-  city: string;
-  registered_at: string;
-  school_logo: string;
-}
+import {
+  fetchAllSchoolsForDashboard,
+  SCHOOL_LEVEL_LABELS,
+  type SchoolData,
+} from "../../service/admin/superAdminDashboardService";
 
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
@@ -22,10 +14,8 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        const { data } = await apiClient.get<{ data: SchoolData[] }>("/schools");
-        if (data.data) {
-          setSchools(data.data);
-        }
+        const data = await fetchAllSchoolsForDashboard();
+        setSchools(data);
       } catch {
         // silently fail
       } finally {
@@ -116,7 +106,7 @@ export default function SuperAdminDashboard() {
                     <td>{school.school_email}</td>
                     <td>
                       <span className="dash-badge dash-badge--active">
-                        {["", "Elementary", "Junior High", "Senior High", "College"][school.school_level] || "N/A"}
+                        {SCHOOL_LEVEL_LABELS[school.school_level] || "N/A"}
                       </span>
                     </td>
                     <td>{school.city}</td>

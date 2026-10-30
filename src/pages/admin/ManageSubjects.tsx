@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { subjectApi, type SubjectListItem } from "../../api/subjects";
+import { fetchAllSubjects, type SubjectListItem } from "../../service/admin/manageSubjectsService";
 import Toast from "../../components/Toast";
 import { COLORS } from "../../constant/colors";
 
@@ -15,8 +15,8 @@ export default function ManageSubjectsAdmin() {
 
   const fetchSubjects = useCallback(async () => {
     try {
-      const { data } = await subjectApi.getAll();
-      setSubjects(data.data || []);
+      const data = await fetchAllSubjects();
+      setSubjects(data);
     } catch {
       setToast({ message: "Failed to load subjects", type: "error" });
     } finally {

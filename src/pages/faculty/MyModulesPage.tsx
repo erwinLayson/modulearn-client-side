@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { getApiErrorMessage } from "../../api/client";
-import { subjectApi, type SubjectListItem } from "../../api/subjects";
-import { classApi, type FacultyClassAssignment } from "../../api/classes";
 import {
-  teachingModuleApi,
+  loadModules,
+  loadAssignedSubjects,
+  loadFacultyClasses,
+  loadModuleDetail,
+  buildModuleFilters,
+  getApiErrorMessage,
+  CATEGORY_OPTIONS,
+  STATUS_LABEL,
+  EMPTY_MODULE_FORM,
+  EMPTY_TEMPLATE_FORM,
   type EligibleClassroom,
+  type LessonClassroomAssignment,
   type ModuleActivityTemplate,
   type ModuleActivityTemplatePayload,
   type ModuleLessonItem,
@@ -13,41 +20,16 @@ import {
   type ModuleStatus,
   type TeacherModuleDetail,
   type TeacherModulePayload,
-} from "../../api/modules";
-import type { GradeItemCategory } from "../../api/gradebook";
-import { classModuleApi } from "../../api/classModules";
+  type SubjectListItem,
+  type FacultyClassAssignment,
+  type GradeItemCategory,
+  teachingModuleApi,
+  classModuleApi,
+} from "../../service/faculty/myModulesService";
 import Toast from "../../components/Toast";
 import PeriodSelector from "../../components/PeriodSelector";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-
-const CATEGORY_OPTIONS: { value: GradeItemCategory; label: string }[] = [
-  { value: "activities", label: "Activity" },
-  { value: "quizzes", label: "Quiz" },
-  { value: "exams", label: "Exam" },
-];
-
-const STATUS_LABEL: Record<ModuleStatus, string> = {
-  draft: "Draft",
-  published: "Published",
-  archived: "Archived",
-};
-
-const EMPTY_MODULE_FORM = {
-  title: "",
-  subject_id: "",
-  description: "",
-  lesson_content: "",
-  status: "draft" as ModuleStatus,
-};
-
-const EMPTY_TEMPLATE_FORM = {
-  title: "",
-  category: "activities" as GradeItemCategory,
-  max_score: "100",
-  instructions: "",
-  sort_order: "0",
-};
 
 export default function MyModulesPage() {
   const { user } = useAuth();
@@ -123,16 +105,18 @@ export default function MyModulesPage() {
   const [showLessonReaderModal, setShowLessonReaderModal] = useState(false);
   const [readingLesson, setReadingLesson] = useState<ModuleLessonItem | null>(null);
 
+  const [lessonAssignmentTarget, setLessonAssignmentTarget] = useState<ModuleLessonItem | null>(null);
+  const [lessonClassrooms, setLessonClassrooms] = useState<LessonClassroomAssignment[]>([]);
+  const [lessonClassroomsLoading, setLessonClassroomsLoading] = useState(false);
+  const [lessonAssigningId, setLessonAssigningId] = useState<string | null>(null);
+
   const fetchModules = useCallback(async () => {
     if (!schoolId) return;
     setLoading(true);
     try {
-      const filters: { q?: string; status?: string; subject_id?: string } = {};
-      if (query.trim()) filters.q = query.trim();
-      if (statusFilter) filters.status = statusFilter;
-      if (subjectFilter) filters.subject_id = subjectFilter;
-      const res = await teachingModuleApi.listMine(filters);
-      setModules(res.data.data || []);
+      const filters = buildModuleFilters(query, statusFilter, subjectFilter);
+      const data = await loadModules(filters);
+      setModules(data);
     } catch (err) {
       setToast({ message: getApiErrorMessage(err, "Failed to load modules"), type: "error" });
     } finally {
@@ -142,15 +126,15 @@ export default function MyModulesPage() {
 
   useEffect(() => {
     if (!schoolId) return;
-    subjectApi.getAssigned()
-      .then((res) => setSubjects(res.data.data || []))
+    loadAssignedSubjects()
+      .then((data) => setSubjects(data))
       .catch(() => setSubjects([]));
   }, [schoolId]);
 
   useEffect(() => {
     if (!schoolId || !user?.id) return;
-    classApi.getAssignedClasses(user.id)
-      .then((res) => setFacultyClasses(res.data.data || []))
+    loadFacultyClasses(user.id)
+      .then((data) => setFacultyClasses(data))
       .catch(() => setFacultyClasses([]));
   }, [schoolId, user?.id]);
 
@@ -180,8 +164,8 @@ export default function MyModulesPage() {
   const fetchDetail = useCallback(async (moduleId: string, quiet = false) => {
     if (!quiet) setDetailLoading(true);
     try {
-      const res = await teachingModuleApi.getMine(moduleId);
-      setDetail(res.data.data || null);
+      const data = await loadModuleDetail(moduleId);
+      setDetail(data);
     } catch (err) {
       setDetail(null);
       if (!quiet) setToast({ message: getApiErrorMessage(err, "Failed to load module"), type: "error" });
@@ -206,6 +190,16 @@ export default function MyModulesPage() {
     }
     return Array.from(groups.entries());
   }, [detail]);
+
+  const lessonAssignmentGroups = useMemo(() => {
+    const groups = new Map<string, LessonClassroomAssignment[]>();
+    for (const room of lessonClassrooms) {
+      const key = room.school_year_name || String(room.school_year_id);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(room);
+    }
+    return Array.from(groups.entries());
+  }, [lessonClassrooms]);
 
   const eligibleGroups = useMemo(() => {
     const groups = new Map<string, EligibleClassroom[]>();
@@ -510,6 +504,56 @@ export default function MyModulesPage() {
   const openReadLesson = (lesson: ModuleLessonItem) => {
     setReadingLesson(lesson);
     setShowLessonReaderModal(true);
+  };
+
+  const openLessonAssignments = async (lesson: ModuleLessonItem) => {
+    if (!selectedId) return;
+    setLessonAssignmentTarget(lesson);
+    setLessonClassrooms([]);
+    setLessonClassroomsLoading(true);
+    try {
+      const res = await teachingModuleApi.listLessonAssignments(selectedId, lesson.id);
+      setLessonClassrooms(res.data.data || []);
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err, "Failed to load class assignments"), type: "error" });
+    } finally {
+      setLessonClassroomsLoading(false);
+    }
+  };
+
+  const toggleLessonClassroom = async (room: LessonClassroomAssignment) => {
+    if (!selectedId || !lessonAssignmentTarget) return;
+    setLessonAssigningId(room.class_module_id);
+    try {
+      if (room.assigned) {
+        await teachingModuleApi.unassignLessonFromClass(
+          selectedId,
+          lessonAssignmentTarget.id,
+          room.class_module_id
+        );
+      } else {
+        await teachingModuleApi.assignLessonToClass(
+          selectedId,
+          lessonAssignmentTarget.id,
+          room.class_module_id
+        );
+      }
+      const res = await teachingModuleApi.listLessonAssignments(
+        selectedId,
+        lessonAssignmentTarget.id
+      );
+      setLessonClassrooms(res.data.data || []);
+      setToast({
+        message: room.assigned
+          ? `Lesson hidden from ${room.class_name}`
+          : `Lesson shared with ${room.class_name}`,
+        type: "success",
+      });
+    } catch (err) {
+      setToast({ message: getApiErrorMessage(err, "Failed to update lesson assignment"), type: "error" });
+    } finally {
+      setLessonAssigningId(null);
+    }
   };
 
   const formatFileSize = (bytes: number | null): string => {
@@ -958,6 +1002,14 @@ export default function MyModulesPage() {
                               Read Lesson
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="mgmt-action mgmt-action--edit"
+                            onClick={() => openLessonAssignments(lesson)}
+                            title="Choose which classes can access this lesson"
+                          >
+                            Assign
+                          </button>
                           <button
                             type="button"
                             className="mgmt-action mgmt-action--edit"
@@ -1893,6 +1945,86 @@ export default function MyModulesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lesson Classroom Assignment Modal */}
+      {lessonAssignmentTarget && (
+        <div className="mgmt-modal-overlay" onClick={() => setLessonAssignmentTarget(null)}>
+          <div className="mgmt-modal mgmt-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="mgmt-modal-header">
+              <div>
+                <h2 className="mgmt-modal-title">Assign Lesson to Classes</h2>
+                <p className="module-muted" style={{ marginTop: "0.25rem" }}>
+                  {lessonAssignmentTarget.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="mgmt-modal-close"
+                onClick={() => setLessonAssignmentTarget(null)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            {lessonClassroomsLoading ? (
+              <div className="mgmt-loading">Loading classrooms...</div>
+            ) : lessonClassrooms.length === 0 ? (
+              <div className="mgmt-empty">
+                This module is not assigned to any class yet. Assign the module to a class first,
+                then publish its lessons to that class.
+              </div>
+            ) : (
+              <div className="module-eligible-list">
+                {lessonAssignmentGroups.map(([year, rooms]) => (
+                  <div key={year} className="module-assignment-group">
+                    <h4 className="module-assignment-group__title">
+                      {year}
+                      {rooms.some((room) => room.school_year_is_current === 1) && " · Current School Year"}
+                    </h4>
+                    {rooms.map((room) => (
+                      <div key={room.class_module_id} className="module-eligible">
+                        <div>
+                          <strong>{room.class_name}</strong>
+                          <span className="module-muted">
+                            {room.assigned
+                              ? "Visible to enrolled students"
+                              : "Not shared with this class"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`mgmt-btn ${room.assigned ? "mgmt-btn--ghost" : "mgmt-btn--primary"}`}
+                          disabled={lessonAssigningId === room.class_module_id}
+                          onClick={() => toggleLessonClassroom(room)}
+                        >
+                          {lessonAssigningId === room.class_module_id
+                            ? "Saving..."
+                            : room.assigned
+                              ? "Remove"
+                              : "Assign"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                <p className="module-muted" style={{ marginTop: "0.5rem" }}>
+                  Students actively enrolled in a class for this school year can view the lesson and
+                  download uploaded file materials.
+                </p>
+              </div>
+            )}
+            <div className="mgmt-modal-actions">
+              <button
+                type="button"
+                className="mgmt-btn mgmt-btn--ghost"
+                onClick={() => setLessonAssignmentTarget(null)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

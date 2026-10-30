@@ -1,11 +1,30 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { classApi, type ClassListItem, type ClassPayload, type ClassUpdatePayload, type ClassFaculty } from "../../api/classes";
-import { subjectApi } from "../../api/subjects";
-import { schoolYearApi, type SchoolYear } from "../../api/school-years";
-import { enrollmentApi, type EnrollmentListItem } from "../../api/enrollments";
-import type { SubjectListItem, SubjectFaculty } from "../../api/subjects";
-import { getApiErrorMessage } from "../../api/client";
+import {
+  fetchSchoolYears,
+  fetchClassesAndAdvisers,
+  fetchClassFaculties,
+  fetchClassActiveStudents,
+  assignFacultyToClass,
+  removeFacultyFromClass,
+  fetchReplacementCandidates,
+  replaceFacultyInClass,
+  createClass,
+  updateClass,
+  deleteClass,
+  getClassById,
+  fetchClassSubjects,
+  fetchSubjectFaculties,
+  getApiErrorMessage,
+  type ClassListItem,
+  type ClassPayload,
+  type ClassUpdatePayload,
+  type ClassFaculty,
+  type SubjectListItem,
+  type SubjectFaculty,
+  type SchoolYear,
+  type EnrollmentListItem,
+} from "../../service/school_admin/manageClassesService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
@@ -73,8 +92,7 @@ export default function ManageClasses() {
     if (!schoolId) return;
     (async () => {
       try {
-        const res = await schoolYearApi.getBySchoolId(schoolId);
-        const years = res.data.data || [];
+        const years = await fetchSchoolYears(schoolId);
         setSchoolYears(years);
         // Default to current school year
         const current = years.find((y: SchoolYear) => y.is_current === 1);
@@ -88,13 +106,9 @@ export default function ManageClasses() {
   const fetchData = useCallback(async () => {
     if (!schoolId) return;
     try {
-      const yearParam = selectedYearId || undefined;
-      const [classesRes, advisersRes] = await Promise.all([
-        classApi.getBySchoolId(schoolId, yearParam),
-        selectedYearId ? classApi.getAvailableAdvisers(schoolId, selectedYearId) : Promise.resolve({ data: { data: [] } }),
-      ]);
-      setClasses(classesRes.data.data || []);
-      setFaculties(advisersRes.data.data || []);
+      const data = await fetchClassesAndAdvisers(schoolId, selectedYearId);
+      setClasses(data.classes);
+      setFaculties(data.advisers);
     } catch {
       setToast({ message: "Failed to load data", type: "error" });
     } finally {
@@ -115,8 +129,8 @@ export default function ManageClasses() {
   const loadClassFaculties = async (classId: string) => {
     setDetailLoading(true);
     try {
-      const assignedRes = await classApi.getFaculties(classId);
-      setAssignedFaculties(assignedRes.data.data || []);
+      const faculties = await fetchClassFaculties(classId);
+      setAssignedFaculties(faculties);
     } catch (err: unknown) {
       setToast({ message: getApiErrorMessage(err, "Failed to load class details"), type: "error" });
     } finally {
@@ -133,8 +147,8 @@ export default function ManageClasses() {
         setStudentsError("No current school year is set for this school, so the class roster can't be loaded.");
         return;
       }
-      const res = await enrollmentApi.getByClassAndSchoolYear(classId, currentSchoolYear.id);
-      setClassStudents((res.data.data || []).filter((e) => e.status === "active"));
+      const students = await fetchClassActiveStudents(classId, currentSchoolYear.id);
+      setClassStudents(students);
     } catch (err: unknown) {
       setStudentsError(getApiErrorMessage(err, "Failed to load the enrolled students"));
     } finally {
@@ -170,7 +184,7 @@ export default function ManageClasses() {
   const handleAssignFaculty = async () => {
     if (!selectedClass || !selectedFacultyId || !selectedSubjectId) return;
     try {
-      await classApi.assignFaculty(selectedClass.id, selectedFacultyId, selectedSubjectId);
+      await assignFacultyToClass(selectedClass.id, selectedFacultyId, selectedSubjectId);
       setToast({ message: "Teacher assigned", type: "success" });
       resetAssignModal();
       openClassDetail(selectedClass);
@@ -183,7 +197,7 @@ export default function ManageClasses() {
     if (!selectedClass) return;
     if (!confirm("Remove this teacher from the class?")) return;
     try {
-      await classApi.removeFaculty(selectedClass.id, facultyId);
+      await removeFacultyFromClass(selectedClass.id, facultyId);
       setToast({ message: "Teacher removed", type: "success" });
       openClassDetail(selectedClass);
     } catch (err: unknown) {
@@ -201,12 +215,7 @@ export default function ManageClasses() {
     if (subjectId) {
       setUpdateLoading(true);
       try {
-        const res = await subjectApi.getFaculties(subjectId);
-        const candidates = (res.data.data || []).filter(
-          (f) =>
-            f.id !== teacher.id &&
-            !assignedFaculties.some((af) => af.id === f.id && af.subject_id === subjectId)
-        );
+        const candidates = await fetchReplacementCandidates(subjectId, teacher.id, assignedFaculties);
         setUpdateCandidates(candidates);
       } catch {
         setToast({ message: "Failed to load teachers", type: "error" });
@@ -227,7 +236,7 @@ export default function ManageClasses() {
   const handleReplaceFaculty = async () => {
     if (!selectedClass || !updatingTeacher || !selectedReplacementId || !updateSubjectId) return;
     try {
-      await classApi.replaceFaculty(selectedClass.id, updatingTeacher.id, selectedReplacementId, updateSubjectId);
+      await replaceFacultyInClass(selectedClass.id, updatingTeacher.id, selectedReplacementId, updateSubjectId);
       setToast({ message: "Teacher replaced successfully", type: "success" });
       closeUpdateModal();
       openClassDetail(selectedClass);
@@ -241,7 +250,7 @@ export default function ManageClasses() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await classApi.create({ ...createForm, school_id: schoolId, school_year_id: selectedYearId as number });
+      await createClass({ ...createForm, school_id: schoolId, school_year_id: selectedYearId as number });
       setToast({ message: "Class created successfully", type: "success" });
       setShowCreate(false);
       setCreateForm({ class_name: "", faculty_id: "", school_id: schoolId, school_year_id: selectedYearId as number, capacity: 30, section: "", grade_level: "", schedule: [] });
@@ -275,20 +284,17 @@ export default function ManageClasses() {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await classApi.update(editing.id, editForm);
+      await updateClass(editing.id, editForm);
       setToast({ message: "Class updated successfully", type: "success" });
       setShowEdit(false);
       setEditing(null);
       await fetchData();
       if (selectedClass && selectedClass.id === editing.id) {
-        const { data } = await classApi.getById(editing.id);
-        if (data.data) setSelectedClass(data.data);
+        const updated = await getClassById(editing.id);
+        if (updated) setSelectedClass(updated);
       }
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update class"
-        : "Failed to update class";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to update class"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -297,7 +303,7 @@ export default function ManageClasses() {
   const handleDelete = async (c: ClassListItem) => {
     if (!confirm(`Delete ${c.class_name}?`)) return;
     try {
-      await classApi.delete(c.id);
+      await deleteClass(c.id);
       setToast({ message: "Class deleted", type: "success" });
       fetchData();
     } catch {
@@ -337,8 +343,8 @@ export default function ManageClasses() {
               setSelectedFacultyId("");
               setShowAssignModal(true);
               try {
-                const res = await subjectApi.getBySchoolId(schoolId);
-                setSubjects(res.data.data || []);
+                const subs = await fetchClassSubjects(schoolId);
+                setSubjects(subs);
               } catch {
                 setToast({ message: "Failed to load subjects", type: "error" });
               }
@@ -560,8 +566,8 @@ export default function ManageClasses() {
                             if (val) {
                               setAssigningLoading(true);
                               try {
-                                const res = await subjectApi.getFaculties(val);
-                                setSubjectFaculties(res.data.data || []);
+                                const faculties = await fetchSubjectFaculties(val);
+                                setSubjectFaculties(faculties);
                               } catch {
                                 setToast({ message: "Failed to load teachers", type: "error" });
                               } finally {

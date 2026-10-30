@@ -1,23 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { facultyApi, type FacultyRole } from "../../api/faculties";
-import type { FacultyListItem, FacultyPayload, FacultyUpdatePayload } from "../../api/faculties";
+import {
+  fetchFaculties as apiFetchFaculties,
+  createFaculty,
+  updateFaculty,
+  deleteFaculty,
+  getApiErrorMessage,
+  facultyRoleOptions,
+  emptyFacultyForm,
+  type FacultyListItem,
+  type FacultyUpdatePayload,
+  type FacultyRole,
+} from "../../service/school_admin/manageFacultiesService";
 import Toast from "../../components/Toast";
 import ActionIcon from "../../components/ActionIcon";
 import Tooltip from "../../components/Tooltip";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-
-const emptyCreate: FacultyPayload = {
-  first_name: "",
-  last_name: "",
-  email: "",
-  school_id: 0,
-  contact_number: "",
-  faculty_role: "teacher",
-};
-
-const facultyRoleOptions: FacultyRole[] = ["teacher", "cashier", "register"];
 
 export default function ManageFaculties() {
   const { user } = useAuth();
@@ -31,17 +30,17 @@ export default function ManageFaculties() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editing, setEditing] = useState<FacultyListItem | null>(null);
-  const [createForm, setCreateForm] = useState(emptyCreate);
+  const [createForm, setCreateForm] = useState(emptyFacultyForm);
   const [editForm, setEditForm] = useState<FacultyUpdatePayload>({});
   const [submitting, setSubmitting] = useState(false);
 
   const schoolId = user?.school_id ?? 0;
 
-  const fetchFaculties = useCallback(async () => {
+  const loadFaculties = useCallback(async () => {
     if (!schoolId) return;
     try {
-      const { data } = await facultyApi.getAll(schoolId);
-      setFaculties(data.data || []);
+      const data = await apiFetchFaculties(schoolId);
+      setFaculties(data);
     } catch {
       setToast({ message: "Failed to load faculties", type: "error" });
     } finally {
@@ -49,7 +48,7 @@ export default function ManageFaculties() {
     }
   }, [schoolId]);
 
-  useEffect(() => { fetchFaculties(); }, [fetchFaculties]);
+  useEffect(() => { loadFaculties(); }, [loadFaculties]);
 
   // ---------- CREATE ----------
   const handleCreate = async (e: React.FormEvent) => {
@@ -57,19 +56,16 @@ export default function ManageFaculties() {
     if (!user?.school_id) return;
     setSubmitting(true);
     try {
-      await facultyApi.create({
+      await createFaculty({
         ...createForm,
         school_id: user.school_id,
       });
       setToast({ message: "Faculty created successfully", type: "success" });
       setShowCreate(false);
-      setCreateForm(emptyCreate);
-      fetchFaculties();
+      setCreateForm(emptyFacultyForm);
+      loadFaculties();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to create faculty"
-        : "Failed to create faculty";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to create faculty"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -87,16 +83,13 @@ export default function ManageFaculties() {
     if (!editing) return;
     setSubmitting(true);
     try {
-      await facultyApi.update(editing.id, editForm);
+      await updateFaculty(editing.id, editForm);
       setToast({ message: "Faculty updated successfully", type: "success" });
       setShowEdit(false);
       setEditing(null);
-      fetchFaculties();
+      loadFaculties();
     } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to update faculty"
-        : "Failed to update faculty";
-      setToast({ message: msg, type: "error" });
+      setToast({ message: getApiErrorMessage(err, "Failed to update faculty"), type: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -106,9 +99,9 @@ export default function ManageFaculties() {
   const handleDelete = async (f: FacultyListItem) => {
     if (!confirm(`Delete ${f.first_name} ${f.last_name}?`)) return;
     try {
-      await facultyApi.delete(f.id);
+      await deleteFaculty(f.id);
       setToast({ message: "Faculty deleted", type: "success" });
-      fetchFaculties();
+      loadFaculties();
     } catch {
       setToast({ message: "Failed to delete faculty", type: "error" });
     }
@@ -126,7 +119,7 @@ export default function ManageFaculties() {
           <p className="mgmt-subtitle">{canManage ? "Manage faculty accounts for your school." : "View faculties in your school."}</p>
         </div>
         {canManage && (
-          <button className="mgmt-btn mgmt-btn--primary" onClick={() => { setCreateForm(emptyCreate); setShowCreate(true); }}>
+          <button className="mgmt-btn mgmt-btn--primary" onClick={() => { setCreateForm(emptyFacultyForm); setShowCreate(true); }}>
             + Add Faculty
           </button>
         )}

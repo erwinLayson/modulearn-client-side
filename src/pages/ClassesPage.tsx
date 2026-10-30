@@ -1,37 +1,32 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useFeatures } from "../context/FeaturesContext";
-import { classApi, type ClassListItem, type ScheduleItem, type FacultyClassAssignment } from "../api/classes";
-import { enrollmentApi, type EnrollmentListItem } from "../api/enrollments";
-import { schoolYearApi } from "../api/school-years";
+import {
+  fetchStudentClassesData,
+  fetchFacultyClassesData,
+  fetchAdminClassesData,
+  fetchClassEnrollments,
+  formatSchedule,
+  formatStudentName,
+  filterEnrollments,
+  buildFacultyCardList,
+  type ClassListItem,
+  type FacultyClassAssignment,
+  type EnrollmentListItem,
+  type UserRole,
+  type EnrollmentClass,
+  type StudentClassDetail,
+} from "../service/classesService";
 import ActionIcon from "../components/ActionIcon";
 import Tooltip from "../components/Tooltip";
 import Toast from "../components/Toast";
 import { COLORS } from "../constant/colors";
 
 type ToastState = { message: string; type: "success" | "error" } | null;
-type UserRole = "school_admin" | "faculty" | "student";
 
 interface ClassesPageProps {
   role: UserRole;
-}
-
-interface EnrollmentClass {
-  class_id: string;
-  class_name: string;
-  subjects: { id: string; name: string }[];
-}
-
-interface StudentClassDetail {
-  id: string;
-  class_name: string;
-  grade_level: string | null;
-  section: string | null;
-  capacity: number | null;
-  faculty_name: string | null;
-  schedule: ScheduleItem[] | null;
-  subjects: { id: string; name: string; teacher_name: string | null }[];
 }
 
 export default function ClassesPage({ role }: ClassesPageProps) {
@@ -60,54 +55,16 @@ export default function ClassesPage({ role }: ClassesPageProps) {
     if (!user) return;
     try {
       if (isStudent) {
-        const { data } = await enrollmentApi.getClassesByStudentId(user.id);
-        const classesData = data.data || [];
-        setEnrollmentClasses(classesData);
-        const details: Record<string, StudentClassDetail> = {};
-        for (const ec of classesData) {
-          try {
-            const classRes = await classApi.getById(ec.class_id);
-            const cls = classRes.data.data;
-            let subjectsWithTeachers: { id: string; name: string; teacher_name: string | null }[] = [];
-            try {
-              const facultiesRes = await classApi.getFaculties(ec.class_id);
-              subjectsWithTeachers = (facultiesRes.data.data || []).map(f => ({
-                id: f.subject_id || f.id,
-                name: f.subject_name || "Unknown Subject",
-                teacher_name: `${f.first_name} ${f.last_name}`,
-              }));
-            } catch {
-              subjectsWithTeachers = ec.subjects?.map(s => ({ id: s.id, name: s.name, teacher_name: null })) || [];
-            }
-            details[ec.class_id] = {
-              id: cls.id, class_name: cls.class_name, grade_level: cls.grade_level,
-              section: cls.section, capacity: cls.capacity, faculty_name: cls.faculty_name,
-              schedule: cls.schedule, subjects: subjectsWithTeachers,
-            };
-          } catch {
-            details[ec.class_id] = {
-              id: ec.class_id, class_name: ec.class_name, grade_level: null, section: null,
-              capacity: null, faculty_name: null, schedule: null,
-              subjects: ec.subjects?.map(s => ({ id: s.id, name: s.name, teacher_name: null })) || [],
-            };
-          }
-        }
-        setStudentClassDetails(details);
+        const data = await fetchStudentClassesData(user.id);
+        setEnrollmentClasses(data.enrollmentClasses);
+        setStudentClassDetails(data.studentClassDetails);
       } else if (isFaculty) {
-        const [assignedRes, syRes] = await Promise.all([
-          classApi.getAssignedClasses(user.id),
-          user.school_id ? schoolYearApi.getCurrent(user.school_id) : Promise.resolve({ data: { data: null } }),
-        ]);
-        const currentSy = syRes.data?.data ?? null;
-        const assignments = (assignedRes.data?.data || []).filter((a: FacultyClassAssignment) =>
-          (currentSy ? a.school_year_id === currentSy.id : true) && a.adviser_role
-        );
+        const assignments = await fetchFacultyClassesData(user.id, user.school_id);
         setAssignedClasses(assignments);
         setClasses([]);
       } else {
         const schoolId = user.school_id ?? 0;
-        const { data } = await classApi.getBySchoolId(schoolId);
-        const allClasses = data.data || [];
+        const allClasses = await fetchAdminClassesData(schoolId);
         setClasses(allClasses);
       }
     } catch {
@@ -137,12 +94,8 @@ export default function ClassesPage({ role }: ClassesPageProps) {
     (async () => {
       try {
         const schoolId = user.school_id ?? 0;
-        const syRes = await schoolYearApi.getCurrent(schoolId);
-        const current = syRes.data.data;
-        if (cancelled) return;
-        if (!current) { setClassEnrollments([]); return; }
-        const res = await enrollmentApi.getByClassAndSchoolYear(selectedClass.id, current.id);
-        if (!cancelled) setClassEnrollments(res.data.data || []);
+        const enrollments = await fetchClassEnrollments(selectedClass.id, schoolId);
+        if (!cancelled) setClassEnrollments(enrollments);
       } catch {
         if (!cancelled) setToast({ message: "Failed to load class details", type: "error" });
       } finally {
@@ -159,52 +112,13 @@ export default function ClassesPage({ role }: ClassesPageProps) {
   // Faculty can print report cards only for students of their own advisory class.
   const showRecordActions = isFaculty && canViewAcademicRecord && !!user && selectedClass?.faculty_id === user.id;
 
-  const formatSchedule = (schedule: ClassListItem["schedule"]) => {
-    if (!Array.isArray(schedule) || schedule.length === 0) return "\u2014";
-    return schedule.map((s: { day: string; start_time: string; end_time: string; room?: string }) =>
-      `${s.day} ${s.start_time}-${s.end_time}${s.room ? ` ${s.room}` : ""}`
-    ).join("; ");
-  };
-
-  const facultyCardList = (() => {
-    const map = new Map<string, { key: string; cls: ClassListItem; advisory: boolean; subjects: string[] }>();
-    for (const c of classes) map.set(c.id, { key: c.id, cls: c, advisory: true, subjects: [] });
-    for (const a of assignedClasses) {
-      const existing = map.get(a.id);
-      const subjects = (a.subjects || []).map(s => s.name);
-      if (existing) { existing.subjects = subjects; }
-      else {
-        map.set(a.id, { key: `taught-${a.id}`, cls: {
-          id: a.id, class_name: a.class_name, module_id: "", module_title: "",
-          faculty_id: a.faculty_id, faculty_name: a.faculty_name, school_id: a.school_id,
-          school_year_id: a.school_year_id,
-          capacity: a.capacity, section: a.section, grade_level: a.grade_level,
-          schedule: a.schedule, created_at: a.created_at,
-        }, advisory: a.adviser_role, subjects });
-      }
-    }
-    return Array.from(map.values());
-  })();
+  const facultyCardList = useMemo(() => {
+    return buildFacultyCardList(classes, assignedClasses);
+  }, [classes, assignedClasses]);
 
   if (!user) return null;
 
-  const formatStudentName = (e: EnrollmentListItem) => {
-    const last = (e.student_last_name || "").trim();
-    const first = (e.student_first_name || "").trim();
-    const middle = (e.student_middle_name || "").trim();
-    const formatted = [last, [first, middle].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-    return formatted || e.student_name;
-  };
-
-  const filteredEnrollments = classEnrollments.filter((e) => {
-    const q = studentSearch.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      formatStudentName(e).toLowerCase().includes(q) ||
-      e.student_email.toLowerCase().includes(q) ||
-      (e.lrn || "").toLowerCase().includes(q)
-    );
-  });
+  const filteredEnrollments = filterEnrollments(classEnrollments, studentSearch);
 
   return (
     <div className="mgmt-page">
