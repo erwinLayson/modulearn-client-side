@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => ({
     createTemplate: vi.fn(),
     updateTemplate: vi.fn(),
     deleteTemplate: vi.fn(),
+    createLesson: vi.fn(),
+    updateLesson: vi.fn(),
+    deleteLesson: vi.fn(),
     getAssigned: vi.fn(),
     getAssignedClasses: vi.fn(),
     assign: vi.fn(),
@@ -31,6 +34,9 @@ vi.mock("../../api/modules", () => ({
         createTemplate: mocks.createTemplate,
         updateTemplate: mocks.updateTemplate,
         deleteTemplate: mocks.deleteTemplate,
+        createLesson: mocks.createLesson,
+        updateLesson: mocks.updateLesson,
+        deleteLesson: mocks.deleteLesson,
     },
 }));
 
@@ -347,5 +353,98 @@ describe("MyModulesPage list", () => {
         expect(
             await screen.findByRole("heading", { name: "Activity Templates (1)" })
         ).toBeInTheDocument();
+    });
+
+    it("uploads a PDF file lesson to the module and displays it in the materials library", async () => {
+        const user = userEvent.setup();
+        const pdfLesson = {
+            id: "lesson-pdf-1",
+            module_id: "module-1",
+            title: "Course Syllabus PDF",
+            lesson_type: "file" as const,
+            content: "Please read before class.",
+            file_name: "syllabus_broken.pdf",
+            file_path: "/uploads/modules/syllabus_broken.pdf",
+            file_type: "application/pdf",
+            file_size: 1048576,
+            sort_order: 1,
+            created_at: "2026-01-03T00:00:00.000Z",
+        };
+
+        mocks.getMine
+            .mockResolvedValueOnce({ data: { data: detail() } })
+            .mockResolvedValue({ data: { data: detail({ lessons: [pdfLesson] }) } });
+        mocks.createLesson.mockResolvedValueOnce({ data: { data: pdfLesson } });
+
+        render(<MyModulesPage />);
+        await user.click(
+            await screen.findByRole("button", { name: "Open module Life of rizal" })
+        );
+
+        // Click Upload Document in Learning Materials Library
+        const uploadBtns = await screen.findAllByRole("button", { name: "Upload Document" });
+        await user.click(uploadBtns[0]);
+
+        const dialog = modal("Upload Lesson Document");
+        const titleInput = within(dialog).getByPlaceholderText(/Presentation Slides/i);
+        await user.type(titleInput, "Course Syllabus PDF");
+
+        // Simulate choosing a file
+        const file = new File(["dummy corrupted pdf content"], "syllabus_broken.pdf", {
+            type: "application/pdf",
+        });
+        const fileInput = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+        await user.upload(fileInput, file);
+
+        await user.click(within(dialog).getByRole("button", { name: "Upload File" }));
+
+        expect(await screen.findByText("Lesson file uploaded successfully")).toBeInTheDocument();
+        expect(mocks.createLesson).toHaveBeenCalledWith(
+            "module-1",
+            expect.any(FormData)
+        );
+
+        // Verify the uploaded PDF card appears in the library with its Preview CTA
+        expect(await screen.findByText("Course Syllabus PDF")).toBeInTheDocument();
+        expect(screen.getByText("syllabus_broken.pdf")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Preview Document" })).toBeInTheDocument();
+    });
+
+    it("handles corrupted or broken PDF upload failure and displays error toast when file upload is rejected", async () => {
+        const user = userEvent.setup();
+
+        mocks.getMine.mockResolvedValueOnce({ data: { data: detail() } });
+        mocks.createLesson.mockRejectedValueOnce({
+            response: {
+                data: { message: "Invalid file type. File appears corrupted or damaged." },
+            },
+        });
+
+        render(<MyModulesPage />);
+        await user.click(
+            await screen.findByRole("button", { name: "Open module Life of rizal" })
+        );
+
+        const uploadBtns = await screen.findAllByRole("button", { name: "Upload Document" });
+        await user.click(uploadBtns[0]);
+
+        const dialog = modal("Upload Lesson Document");
+        const titleInput = within(dialog).getByPlaceholderText(/Presentation Slides/i);
+        await user.type(titleInput, "Corrupted PDF Test");
+
+        const corruptedFile = new File(["not a real pdf content"], "corrupted.pdf", {
+            type: "application/pdf",
+        });
+        const fileInput = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+        await user.upload(fileInput, corruptedFile);
+
+        await user.click(within(dialog).getByRole("button", { name: "Upload File" }));
+
+        // Surfaces error toast from the server response
+        expect(
+            await screen.findByText("Invalid file type. File appears corrupted or damaged.")
+        ).toBeInTheDocument();
+        // Modal remains open so user can fix or re-select file
+        expect(dialog).toBeInTheDocument();
     });
 });
