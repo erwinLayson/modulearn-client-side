@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import LearningMaterialsLibrary from "../../components/faculty/materials/LearningMaterialsLibrary";
+import AssessmentLibraryTable from "../../components/faculty/assessments/AssessmentLibraryTable";
 import {
   loadModules,
   loadAssignedSubjects,
@@ -30,6 +33,28 @@ import Toast from "../../components/Toast";
 import PeriodSelector from "../../components/PeriodSelector";
 import type { ToastState } from "../../types";
 
+function useSafeNavigate(): (to: string, options?: any) => void {
+  try {
+    const nav = useNavigate();
+    return (to: string, options?: any) => nav(to, options);
+  } catch {
+    return (to: string) => {
+      if (typeof window !== "undefined") {
+        window.location.href = to;
+      }
+    };
+  }
+}
+
+function useSafeSearchParams(): [URLSearchParams, (next: any, opts?: any) => void] {
+  try {
+    return useSearchParams();
+  } catch {
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    return [params, () => {}];
+  }
+}
+
 export default function MyModulesPage() {
   const { user } = useAuth();
   const schoolId = user?.school_id ?? 0;
@@ -51,7 +76,26 @@ export default function MyModulesPage() {
     setLoading(true);
   };
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const navigate = useSafeNavigate();
+  const [searchParams, setSearchParams] = useSafeSearchParams();
+  const initialModuleId = searchParams.get("moduleId");
+  const [selectedId, setSelectedId] = useState<string | null>(initialModuleId);
+
+  useEffect(() => {
+    const qModuleId = searchParams.get("moduleId");
+    if (qModuleId && qModuleId !== selectedId) {
+      setSelectedId(qModuleId);
+    }
+  }, [searchParams]);
+
+  const handleSelectModule = (id: string | null) => {
+    setSelectedId(id);
+    if (id) {
+      setSearchParams({ moduleId: id }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  };
   const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
   const [detail, setDetail] = useState<TeacherModuleDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -100,9 +144,6 @@ export default function MyModulesPage() {
   const [lessonFileSortOrder, setLessonFileSortOrder] = useState("0");
   const [selectedLessonFile, setSelectedLessonFile] = useState<File | null>(null);
   const [savingFileLesson, setSavingFileLesson] = useState(false);
-
-  const [showLessonReaderModal, setShowLessonReaderModal] = useState(false);
-  const [readingLesson, setReadingLesson] = useState<ModuleLessonItem | null>(null);
 
   const [lessonAssignmentTarget, setLessonAssignmentTarget] = useState<ModuleLessonItem | null>(null);
   const [lessonClassrooms, setLessonClassrooms] = useState<LessonClassroomAssignment[]>([]);
@@ -274,7 +315,7 @@ export default function MyModulesPage() {
         const res = await teachingModuleApi.createMine(payload);
         const newId = res.data.data?.id;
         setToast({ message: "Module created", type: "success" });
-        if (newId) setSelectedId(newId);
+        if (newId) handleSelectModule(newId);
       }
       setShowModuleModal(false);
       await fetchModules();
@@ -488,6 +529,23 @@ export default function MyModulesPage() {
     }
   };
 
+  useEffect(() => {
+    const editLessonId = searchParams.get("editLesson");
+    if (editLessonId && detail?.lessons) {
+      const target = detail.lessons.find((l) => l.id === editLessonId);
+      if (target) {
+        if (target.lesson_type === "file") {
+          openEditFileLesson(target);
+        } else {
+          openEditTextLesson(target);
+        }
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete("editLesson");
+        setSearchParams(nextParams, { replace: true });
+      }
+    }
+  }, [searchParams, detail]);
+
   const deleteLesson = async (lesson: ModuleLessonItem) => {
     if (!selectedId || !confirm(`Delete lesson "${lesson.title}"?`)) return;
     try {
@@ -498,11 +556,6 @@ export default function MyModulesPage() {
     } catch (err) {
       setToast({ message: getApiErrorMessage(err, "Failed to delete lesson"), type: "error" });
     }
-  };
-
-  const openReadLesson = (lesson: ModuleLessonItem) => {
-    setReadingLesson(lesson);
-    setShowLessonReaderModal(true);
   };
 
   const openLessonAssignments = async (lesson: ModuleLessonItem) => {
@@ -749,7 +802,7 @@ export default function MyModulesPage() {
             <button
               type="button"
               className="mgmt-btn mgmt-btn--ghost module-back-btn"
-              onClick={() => setSelectedId(null)}
+              onClick={() => handleSelectModule(null)}
             >
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -760,7 +813,7 @@ export default function MyModulesPage() {
               <button
                 type="button"
                 className="module-breadcrumb-link"
-                onClick={() => setSelectedId(null)}
+                onClick={() => handleSelectModule(null)}
               >
                 My Modules
               </button>
@@ -779,7 +832,7 @@ export default function MyModulesPage() {
               <button
                 type="button"
                 className="mgmt-btn mgmt-btn--primary"
-                onClick={() => setSelectedId(null)}
+                onClick={() => handleSelectModule(null)}
               >
                 Back to Modules
               </button>
@@ -884,236 +937,46 @@ export default function MyModulesPage() {
                 </div>
               </div>
 
-              {/* Section 1: Lessons & Learning Materials */}
+              {/* Section 1: Learning Materials Library */}
+              <LearningMaterialsLibrary
+                moduleId={detail.module.id}
+                moduleTitle={detail.module.title}
+                lessons={detail.lessons || []}
+                onReadLesson={(lesson) =>
+                  navigate(`/dashboard/modules/${detail.module.id}/lessons/${lesson.id}/read`)
+                }
+                onPreviewDocument={(lesson) =>
+                  navigate(`/dashboard/modules/${detail.module.id}/lessons/${lesson.id}/preview`)
+                }
+                onAssignLesson={openLessonAssignments}
+                onEditLesson={(lesson) =>
+                  lesson.lesson_type === "file"
+                    ? openEditFileLesson(lesson)
+                    : openEditTextLesson(lesson)
+                }
+                onDeleteLesson={deleteLesson}
+                onOpenCreateTextLesson={openCreateTextLesson}
+                onOpenUploadFileLesson={openUploadFileLesson}
+                getFileDownloadUrl={(lessonId) =>
+                  `/api/modules/mine/${detail.module.id}/lessons/${lessonId}/file`
+                }
+              />
+
+              {/* Section 2: Assessment Library / Activity Templates */}
               <section className="module-detail-card">
-                <div className="module-detail-card-head">
-                  <div>
-                    <h3 className="module-detail-card-title">
-                      Lessons & Learning Materials ({detail.lessons?.length ?? 0})
-                    </h3>
-                    <p className="module-detail-card-subtitle">
-                      Written lectures, notes, and uploaded document files (PDF, Word, PPT) for this module.
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      className="mgmt-btn mgmt-btn--ghost mgmt-btn--sm"
-                      onClick={openCreateTextLesson}
-                    >
-                      + Write Lesson
-                    </button>
-                    <button
-                      type="button"
-                      className="mgmt-btn mgmt-btn--primary mgmt-btn--sm"
-                      onClick={openUploadFileLesson}
-                    >
-                      + Upload File
-                    </button>
-                  </div>
-                </div>
-
-                {!detail.lessons || detail.lessons.length === 0 ? (
-                  <div className="module-section-empty">
-                    <p>No lessons or materials added to this module yet.</p>
-                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
-                      <button
-                        type="button"
-                        className="mgmt-btn mgmt-btn--ghost mgmt-btn--sm"
-                        onClick={openCreateTextLesson}
-                      >
-                        Write First Lesson
-                      </button>
-                      <button
-                        type="button"
-                        className="mgmt-btn mgmt-btn--primary mgmt-btn--sm"
-                        onClick={openUploadFileLesson}
-                      >
-                        Upload Lesson Document
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="module-lesson-cards-grid">
-                    {detail.lessons.map((lesson) => (
-                      <div key={lesson.id} className="module-lesson-card">
-                        <div className="module-lesson-card-header">
-                          <div className="module-lesson-card-top-row">
-                            <span
-                              className={`module-lesson-type-badge ${
-                                lesson.lesson_type === "file"
-                                  ? "module-lesson-type-badge--file"
-                                  : "module-lesson-type-badge--text"
-                              }`}
-                            >
-                              {lesson.lesson_type === "file" ? "Document File" : "Written Lesson"}
-                            </span>
-                            <span className="module-lesson-order-tag">Order #{lesson.sort_order}</span>
-                          </div>
-                          <h4 className="module-lesson-card-title">{lesson.title}</h4>
-                        </div>
-
-                        {lesson.lesson_type === "file" ? (
-                          <div className="module-lesson-file-box">
-                            <div className="module-lesson-file-icon">
-                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                              </svg>
-                            </div>
-                            <div className="module-lesson-file-info">
-                              <span className="module-lesson-file-name" title={lesson.file_name || "Document"}>
-                                {lesson.file_name || "Document"}
-                              </span>
-                              <span className="module-lesson-file-meta">
-                                {formatFileSize(lesson.file_size)}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="module-lesson-content-snippet">
-                            {lesson.content || "No content."}
-                          </p>
-                        )}
-
-                        {lesson.lesson_type === "file" && lesson.content && (
-                          <p className="module-lesson-file-notes">
-                            Note: {lesson.content}
-                          </p>
-                        )}
-
-                        <div className="module-lesson-card-actions">
-                          {lesson.lesson_type === "file" && lesson.file_path ? (
-                            <a
-                              href={lesson.file_path}
-                              target="_blank"
-                              rel="noreferrer"
-                              download={lesson.file_name || undefined}
-                              className="mgmt-action mgmt-action--edit module-card-primary-action"
-                            >
-                              Download
-                            </a>
-                          ) : (
-                            <button
-                              type="button"
-                              className="mgmt-action mgmt-action--edit module-card-primary-action"
-                              onClick={() => openReadLesson(lesson)}
-                            >
-                              Read Lesson
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="mgmt-action mgmt-action--edit"
-                            onClick={() => openLessonAssignments(lesson)}
-                            title="Choose which classes can access this lesson"
-                          >
-                            Assign
-                          </button>
-                          <button
-                            type="button"
-                            className="mgmt-action mgmt-action--edit"
-                            onClick={() =>
-                              lesson.lesson_type === "file"
-                                ? openEditFileLesson(lesson)
-                                : openEditTextLesson(lesson)
-                            }
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="mgmt-action mgmt-action--delete"
-                            onClick={() => deleteLesson(lesson)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {/* Section 2: Activity Templates */}
-              <section className="module-detail-card">
-                <div className="module-detail-card-head">
-                  <div>
-                    <h3 className="module-detail-card-title">
-                      Activity Templates ({detail.templates.length})
-                    </h3>
-                    <p className="module-detail-card-subtitle">
-                      Reusable templates that can be assigned as graded activities in your classes.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="mgmt-btn mgmt-btn--primary mgmt-btn--sm"
-                    onClick={openTemplateCreate}
-                  >
-                    + Add Template
-                  </button>
-                </div>
-
-                {detail.templates.length === 0 ? (
-                  <div className="module-section-empty">
-                    <p>No activity templates created for this module yet.</p>
-                    <button
-                      type="button"
-                      className="mgmt-btn mgmt-btn--primary mgmt-btn--sm"
-                      onClick={openTemplateCreate}
-                    >
-                      Create your first template
-                    </button>
-                  </div>
-                ) : (
-                  <div className="module-template-cards-grid">
-                    {detail.templates.map((template) => (
-                      <div key={template.id} className="module-template-card">
-                        <div className="module-template-card-header">
-                          <div className="module-template-card-badge-row">
-                            <span className={`module-status module-status--${template.category}`}>
-                              {CATEGORY_OPTIONS.find((c) => c.value === template.category)?.label || template.category}
-                            </span>
-                            <span className="module-template-score">Max: {template.max_score} pts</span>
-                          </div>
-                          <h4 className="module-template-card-title">{template.title}</h4>
-                        </div>
-                        {template.instructions && (
-                          <p className="module-template-card-instructions">{template.instructions}</p>
-                        )}
-                        <div className="module-template-card-actions">
-                          <button
-                            type="button"
-                            className="mgmt-action mgmt-action--edit module-card-primary-action"
-                            onClick={() => openCreateActivity(undefined, template.id)}
-                            disabled={!detail.assignments || detail.assignments.length === 0}
-                            title={
-                              !detail.assignments || detail.assignments.length === 0
-                                ? "Assign module to a class first"
-                                : "Create activity from this template in an assigned class"
-                            }
-                          >
-                            + Create Activity
-                          </button>
-                          <button
-                            type="button"
-                            className="mgmt-action mgmt-action--edit"
-                            onClick={() => openTemplateEdit(template)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="mgmt-action mgmt-action--delete"
-                            onClick={() => deleteTemplate(template)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <AssessmentLibraryTable
+                  templates={detail.templates || []}
+                  creatorName={user?.name || "Teacher"}
+                  moduleTitle={detail.module.title}
+                  moduleSubject={detail.module.subject || undefined}
+                  hasAssignments={Boolean(detail.assignments && detail.assignments.length > 0)}
+                  isArchived={detail.module.status === "archived"}
+                  loading={detailLoading}
+                  onCreateTemplate={openTemplateCreate}
+                  onEditTemplate={openTemplateEdit}
+                  onDeleteTemplate={deleteTemplate}
+                  onAssignTemplate={(template) => openCreateActivity(undefined, template.id)}
+                />
               </section>
 
               {/* Section 3: Assigned Classrooms */}
@@ -1249,14 +1112,14 @@ export default function MyModulesPage() {
                 <article
                   key={module.id}
                   className={`module-card ${openCardMenuId === module.id ? "module-card--menu-open" : ""}`}
-                  onClick={() => setSelectedId(module.id)}
+                  onClick={() => handleSelectModule(module.id)}
                   tabIndex={0}
                   role="button"
                   aria-label={`Open module ${module.title}`}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setSelectedId(module.id);
+                      handleSelectModule(module.id);
                     }
                   }}
                 >
@@ -2028,53 +1891,7 @@ export default function MyModulesPage() {
         </div>
       )}
 
-      {/* Lesson Reader Modal */}
-      {showLessonReaderModal && readingLesson && (
-        <div className="mgmt-modal-overlay" onClick={() => setShowLessonReaderModal(false)}>
-          <div className="mgmt-modal mgmt-modal--lg" onClick={(e) => e.stopPropagation()}>
-            <div className="mgmt-modal-header">
-              <div>
-                <span className="module-lesson-type-badge module-lesson-type-badge--text" style={{ marginBottom: "0.25rem" }}>
-                  Written Lesson
-                </span>
-                <h2 className="mgmt-modal-title">{readingLesson.title}</h2>
-              </div>
-              <button
-                type="button"
-                className="mgmt-modal-close"
-                onClick={() => setShowLessonReaderModal(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ padding: "1.25rem 0" }}>
-              <div className="module-lesson-reader">
-                {readingLesson.content || "No content."}
-              </div>
-            </div>
-            <div className="mgmt-modal-actions">
-              <button
-                type="button"
-                className="mgmt-btn mgmt-btn--ghost"
-                onClick={() => setShowLessonReaderModal(false)}
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                className="mgmt-btn mgmt-btn--primary"
-                onClick={() => {
-                  setShowLessonReaderModal(false);
-                  openEditTextLesson(readingLesson);
-                }}
-              >
-                Edit Lesson
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Class Activity Modal */}
     </div>
   );
 }
