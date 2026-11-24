@@ -1178,18 +1178,3 @@
     justify-content: center;
   }
 }
-    align-items: stretch;
-  }
-
-  .assessment-preview-footer-left,
-  .assessment-preview-footer-right {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .assessment-preview-footer-left button,
-  .assessment-preview-footer-right button {
-    width: 100%;
-    justify-content: center;
-  }
-}
