@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { renderAsync } from "docx-preview";
 import {
   cleanFileName,
@@ -371,15 +371,14 @@ export default function StudentDocxReaderModal({
   const handleZoomIn = () => setZoom((z) => Math.min(2.5, +(z + 0.15).toFixed(2)));
   const handleZoomOut = () => setZoom((z) => Math.max(0.5, +(z - 0.15).toFixed(2)));
   const handleFitWidth = () => setZoom(1.0);
-  const handleFitPage = () => setZoom(0.85);
 
   // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
   }, []);
@@ -532,9 +531,8 @@ export default function StudentDocxReaderModal({
           <Tooltip label="Document information">
             <button
               type="button"
-              className={`student-docx-tool-btn ${
-                showInfoDrawer ? "student-docx-tool-btn--active" : ""
-              }`}
+              className={`student-docx-tool-btn ${showInfoDrawer ? "student-docx-tool-btn--active" : ""
+                }`}
               onClick={() => setShowInfoDrawer((prev) => !prev)}
               aria-label="Toggle document details"
               aria-pressed={showInfoDrawer}

@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Toast from "../../components/Toast";
 import Tooltip from "../../components/Tooltip";
-import PDFViewer from "../../components/PDFViewer";
 import StudentLessonReaderModal from "../../components/StudentLessonReaderModal";
 import StudentPDFReaderModal from "../../components/StudentPDFReaderModal";
 import StudentDocxReaderModal from "../../components/StudentDocxReaderModal";
+import StudentUnifiedReaderModal from "../../components/StudentUnifiedReaderModal";
 import type { ToastState } from "../../types";
 import {
   getFileMeta,
@@ -153,25 +153,6 @@ function BookOpenIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-      />
-    </svg>
-  );
-}
-
-function ExternalLinkIcon() {
-  return (
-    <svg
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.8}
-      stroke="currentColor"
-      style={{ width: "1rem", height: "1rem", display: "block" }}
-      aria-hidden="true"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 21 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
       />
     </svg>
   );
@@ -502,197 +483,12 @@ export default function StudentLessonsPage() {
         />
       )}
 
-      {/* File Material Details & Preview Modal */}
+      {/* File Material Details & Preview (Single Source of Truth Unified Reader) */}
       {inspectingMaterial && (
-        <div className="mgmt-modal-overlay" onClick={() => setInspectingMaterial(null)}>
-          <div
-            className={`mgmt-modal mgmt-modal--wide ${
-              getFileMeta(
-                inspectingMaterial.file_name,
-                inspectingMaterial.file_type,
-                inspectingMaterial.file_size
-              ).category === "pdf"
-                ? "mgmt-modal--pdf"
-                : ""
-            }`}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="material-preview-modal-title"
-          >
-            {(() => {
-              const meta = getFileMeta(
-                inspectingMaterial.file_name,
-                inspectingMaterial.file_type,
-                inspectingMaterial.file_size
-              );
-              const fileUrl = getStudentLessonFileUrl(inspectingMaterial.lesson_id);
-              const isImage = meta.category === "image";
-              const isPdf = meta.category === "pdf" || meta.isPdf;
-
-              const handleDownload = () => {
-                const a = document.createElement("a");
-                a.href = fileUrl;
-                if (inspectingMaterial.file_name) a.download = inspectingMaterial.file_name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-              };
-
-              return (
-                <>
-                  <div className="mgmt-modal-header">
-                    <div>
-                      <span
-                        className={`materials-type-badge ${meta.badgeClass}`}
-                        style={{ marginBottom: "0.35rem" }}
-                      >
-                        {meta.badgeLabel}
-                      </span>
-                      <h2 id="material-preview-modal-title" className="mgmt-modal-title">{inspectingMaterial.title}</h2>
-                    </div>
-                    <button
-                      type="button"
-                      className="mgmt-modal-close"
-                      onClick={() => setInspectingMaterial(null)}
-                      aria-label="Close preview modal"
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  <div className="mgmt-form">
-                    {/* File Overview Card */}
-                    <div className="material-preview-card">
-                      <div
-                        className={`materials-file-icon-wrap materials-file-icon--${meta.category}`}
-                        style={{ width: "3rem", height: "3rem" }}
-                      >
-                        <FileCategoryIcon category={meta.category} />
-                      </div>
-                      <div className="material-preview-info">
-                        <div className="material-preview-name">{meta.cleanName}</div>
-                        <div className="material-preview-meta">
-                          {meta.typeDescription} · {meta.formattedSize}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PDF Preview if applicable */}
-                    {isPdf && inspectingMaterial.has_file && (
-                      <div className="material-preview-pdf-box" data-testid="student-pdf-preview-box">
-                        <PDFViewer
-                          url={`${fileUrl}?inline=true`}
-                          fileName={meta.cleanName}
-                          onDownload={handleDownload}
-                        />
-                      </div>
-                    )}
-
-                    {/* Image Preview if applicable */}
-                    {isImage && inspectingMaterial.has_file && (
-                      <div className="material-preview-image-box">
-                        <img
-                          src={fileUrl}
-                          alt={meta.cleanName}
-                          className="material-preview-image"
-                        />
-                      </div>
-                    )}
-
-                    {/* Context Information */}
-                    <div className="material-preview-context-grid">
-                      <div className="material-preview-context-item">
-                        <span className="material-preview-context-label">Class</span>
-                        <span className="material-preview-context-val">
-                          {inspectingMaterial.class_name} ({inspectingMaterial.school_year_name})
-                        </span>
-                      </div>
-                      <div className="material-preview-context-item">
-                        <span className="material-preview-context-label">Module</span>
-                        <span className="material-preview-context-val">
-                          {inspectingMaterial.module_title}
-                        </span>
-                      </div>
-                      <div className="material-preview-context-item">
-                        <span className="material-preview-context-label">Subject & Teacher</span>
-                        <span className="material-preview-context-val">
-                          {[inspectingMaterial.subject_name, inspectingMaterial.teacher_name]
-                            .filter(Boolean)
-                            .join(" · ") || "—"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Teacher's Notes/Instructions */}
-                    {inspectingMaterial.content && (
-                      <div className="material-preview-section" style={{ marginTop: "1.25rem" }}>
-                        <div className="material-preview-section-title">
-                          Teacher's Instructions & Notes
-                        </div>
-                        <div
-                          className="module-lesson-content-snippet"
-                          style={{
-                            WebkitLineClamp: "unset",
-                            display: "block",
-                            background: "#f8fafc",
-                          }}
-                        >
-                          {inspectingMaterial.content}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Modal Actions */}
-                    <div className="mgmt-modal-actions" style={{ marginTop: "1.5rem" }}>
-                      <button
-                        type="button"
-                        className="mgmt-btn mgmt-btn--ghost"
-                        onClick={() => setInspectingMaterial(null)}
-                      >
-                        Close
-                      </button>
-                      {isPdf && inspectingMaterial.has_file && (
-                        <a
-                          href={`${fileUrl}?inline=true`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mgmt-btn mgmt-btn--secondary"
-                          style={{
-                            textDecoration: "none",
-                            display: "inline-flex",
-                            gap: "0.5rem",
-                            alignItems: "center",
-                          }}
-                          title="Open PDF in a new browser tab"
-                        >
-                          <ExternalLinkIcon />
-                          <span>Open in New Tab</span>
-                        </a>
-                      )}
-                      {inspectingMaterial.has_file && (
-                        <a
-                          href={fileUrl}
-                          download={inspectingMaterial.file_name || undefined}
-                          className="mgmt-btn mgmt-btn--primary"
-                          style={{
-                            textDecoration: "none",
-                            display: "inline-flex",
-                            gap: "0.5rem",
-                            alignItems: "center",
-                          }}
-                        >
-                          <DownloadIcon />
-                          <span>Download Original File</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
+        <StudentUnifiedReaderModal
+          lesson={inspectingMaterial}
+          onClose={() => setInspectingMaterial(null)}
+        />
       )}
     </div>
   );
