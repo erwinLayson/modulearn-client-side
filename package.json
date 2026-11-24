@@ -15,6 +15,7 @@
   "dependencies": {
     "@types/multer": "^2.2.0",
     "@types/xlsx": "^0.0.36",
+    "docx-preview": "^0.4.1",
     "multer": "^2.4.0",
     "pdfjs-dist": "^6.5.438",
     "react": "^19.2.8",
