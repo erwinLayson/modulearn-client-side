@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Toast from "../../components/Toast";
 import Tooltip from "../../components/Tooltip";
+import PDFViewer from "../../components/PDFViewer";
 import StudentLessonReaderModal from "../../components/StudentLessonReaderModal";
+import StudentPDFReaderModal from "../../components/StudentPDFReaderModal";
+import StudentDocxReaderModal from "../../components/StudentDocxReaderModal";
 import type { ToastState } from "../../types";
 import {
   getFileMeta,
@@ -155,12 +158,33 @@ function BookOpenIcon() {
   );
 }
 
+function ExternalLinkIcon() {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.8}
+      stroke="currentColor"
+      style={{ width: "1rem", height: "1rem", display: "block" }}
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 21 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+      />
+    </svg>
+  );
+}
+
 export default function StudentLessonsPage() {
   const { user } = useAuth();
   const [lessons, setLessons] = useState<StudentLessonItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
   const [readingLesson, setReadingLesson] = useState<StudentLessonItem | null>(null);
+  const [readingPdfLesson, setReadingPdfLesson] = useState<StudentLessonItem | null>(null);
+  const [readingDocxLesson, setReadingDocxLesson] = useState<StudentLessonItem | null>(null);
   const [inspectingMaterial, setInspectingMaterial] = useState<StudentLessonItem | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
@@ -251,6 +275,8 @@ export default function StudentLessonsPage() {
                   const fileMeta = isFile
                     ? getFileMeta(lesson.file_name, lesson.file_type, lesson.file_size)
                     : null;
+                  const isPdf = Boolean(fileMeta?.isPdf || fileMeta?.category === "pdf");
+                  const isWord = Boolean(fileMeta?.isWord || fileMeta?.category === "word");
 
                   return (
                     <tr key={lesson.assignment_id}>
@@ -326,7 +352,15 @@ export default function StudentLessonsPage() {
                               <button
                                 type="button"
                                 className="materials-file-name-btn"
-                                onClick={() => setInspectingMaterial(lesson)}
+                                onClick={() => {
+                                  if (isPdf) {
+                                    setReadingPdfLesson(lesson);
+                                  } else if (isWord) {
+                                    setReadingDocxLesson(lesson);
+                                  } else {
+                                    setInspectingMaterial(lesson);
+                                  }
+                                }}
                                 title={lesson.file_name || "Document"}
                               >
                                 {fileMeta.cleanName}
@@ -373,14 +407,35 @@ export default function StudentLessonsPage() {
                         <div className="materials-actions-group">
                           {isFile ? (
                             <>
-                              <Tooltip label="Preview details">
+                              <Tooltip
+                                label={
+                                  isPdf
+                                    ? "Read PDF document"
+                                    : isWord
+                                    ? "Read Word document"
+                                    : "Preview details"
+                                }
+                              >
                                 <button
                                   type="button"
-                                  className="materials-btn materials-btn--icon-only"
-                                  onClick={() => setInspectingMaterial(lesson)}
+                                  className={`materials-btn ${
+                                    isPdf || isWord
+                                      ? "materials-btn--preview"
+                                      : "materials-btn--icon-only"
+                                  }`}
+                                  onClick={() => {
+                                    if (isPdf) {
+                                      setReadingPdfLesson(lesson);
+                                    } else if (isWord) {
+                                      setReadingDocxLesson(lesson);
+                                    } else {
+                                      setInspectingMaterial(lesson);
+                                    }
+                                  }}
                                   aria-label={`Preview details for ${lesson.title}`}
                                 >
                                   <EyeIcon />
+                                  {(isPdf || isWord) && <span>Preview</span>}
                                 </button>
                               </Tooltip>
                               {lesson.has_file && (
@@ -426,7 +481,24 @@ export default function StudentLessonsPage() {
       {readingLesson && (
         <StudentLessonReaderModal
           lesson={readingLesson}
+          studentId={user.id}
           onClose={() => setReadingLesson(null)}
+        />
+      )}
+
+      {/* Dedicated Full-Screen PDF Document Reader */}
+      {readingPdfLesson && (
+        <StudentPDFReaderModal
+          lesson={readingPdfLesson}
+          onClose={() => setReadingPdfLesson(null)}
+        />
+      )}
+
+      {/* Dedicated Full-Screen Word DOCX Document Reader */}
+      {readingDocxLesson && (
+        <StudentDocxReaderModal
+          lesson={readingDocxLesson}
+          onClose={() => setReadingDocxLesson(null)}
         />
       )}
 
@@ -434,7 +506,15 @@ export default function StudentLessonsPage() {
       {inspectingMaterial && (
         <div className="mgmt-modal-overlay" onClick={() => setInspectingMaterial(null)}>
           <div
-            className="mgmt-modal mgmt-modal--wide"
+            className={`mgmt-modal mgmt-modal--wide ${
+              getFileMeta(
+                inspectingMaterial.file_name,
+                inspectingMaterial.file_type,
+                inspectingMaterial.file_size
+              ).category === "pdf"
+                ? "mgmt-modal--pdf"
+                : ""
+            }`}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -448,6 +528,16 @@ export default function StudentLessonsPage() {
               );
               const fileUrl = getStudentLessonFileUrl(inspectingMaterial.lesson_id);
               const isImage = meta.category === "image";
+              const isPdf = meta.category === "pdf" || meta.isPdf;
+
+              const handleDownload = () => {
+                const a = document.createElement("a");
+                a.href = fileUrl;
+                if (inspectingMaterial.file_name) a.download = inspectingMaterial.file_name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              };
 
               return (
                 <>
@@ -487,6 +577,17 @@ export default function StudentLessonsPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* PDF Preview if applicable */}
+                    {isPdf && inspectingMaterial.has_file && (
+                      <div className="material-preview-pdf-box" data-testid="student-pdf-preview-box">
+                        <PDFViewer
+                          url={`${fileUrl}?inline=true`}
+                          fileName={meta.cleanName}
+                          onDownload={handleDownload}
+                        />
+                      </div>
+                    )}
 
                     {/* Image Preview if applicable */}
                     {isImage && inspectingMaterial.has_file && (
@@ -551,12 +652,35 @@ export default function StudentLessonsPage() {
                       >
                         Close
                       </button>
+                      {isPdf && inspectingMaterial.has_file && (
+                        <a
+                          href={`${fileUrl}?inline=true`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mgmt-btn mgmt-btn--secondary"
+                          style={{
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            gap: "0.5rem",
+                            alignItems: "center",
+                          }}
+                          title="Open PDF in a new browser tab"
+                        >
+                          <ExternalLinkIcon />
+                          <span>Open in New Tab</span>
+                        </a>
+                      )}
                       {inspectingMaterial.has_file && (
                         <a
                           href={fileUrl}
                           download={inspectingMaterial.file_name || undefined}
                           className="mgmt-btn mgmt-btn--primary"
-                          style={{ textDecoration: "none", display: "inline-flex", gap: "0.5rem" }}
+                          style={{
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            gap: "0.5rem",
+                            alignItems: "center",
+                          }}
                         >
                           <DownloadIcon />
                           <span>Download Original File</span>

@@ -23,6 +23,8 @@ export interface FileMeta {
   cleanName: string;
   formattedSize: string;
   isPreviewable: boolean;
+  isPdf: boolean;
+  isWord: boolean;
 }
 
 export async function loadStudentLessons(): Promise<StudentLessonItem[]> {
@@ -77,6 +79,8 @@ export function getFileMeta(
       cleanName: clean,
       formattedSize,
       isPreviewable: true,
+      isPdf: true,
+      isWord: false,
     };
   }
 
@@ -93,7 +97,9 @@ export function getFileMeta(
       extension: ext.toUpperCase() || "DOCX",
       cleanName: clean,
       formattedSize,
-      isPreviewable: false,
+      isPreviewable: true,
+      isPdf: false,
+      isWord: true,
     };
   }
 
@@ -112,6 +118,8 @@ export function getFileMeta(
       cleanName: clean,
       formattedSize,
       isPreviewable: false,
+      isPdf: false,
+      isWord: false,
     };
   }
 
@@ -129,6 +137,8 @@ export function getFileMeta(
       cleanName: clean,
       formattedSize,
       isPreviewable: false,
+      isPdf: false,
+      isWord: false,
     };
   }
 
@@ -145,6 +155,8 @@ export function getFileMeta(
       cleanName: clean,
       formattedSize,
       isPreviewable: true,
+      isPdf: false,
+      isWord: false,
     };
   }
 
@@ -162,6 +174,8 @@ export function getFileMeta(
       cleanName: clean,
       formattedSize,
       isPreviewable: false,
+      isPdf: false,
+      isWord: false,
     };
   }
 
@@ -175,6 +189,8 @@ export function getFileMeta(
       cleanName: clean,
       formattedSize,
       isPreviewable: true,
+      isPdf: false,
+      isWord: false,
     };
   }
 
@@ -187,5 +203,7 @@ export function getFileMeta(
     cleanName: clean,
     formattedSize,
     isPreviewable: false,
+    isPdf: false,
+    isWord: false,
   };
 }
