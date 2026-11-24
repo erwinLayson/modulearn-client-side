@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Toast from "../../components/Toast";
 import Tooltip from "../../components/Tooltip";
+import StudentLessonReaderModal from "../../components/StudentLessonReaderModal";
 import type { ToastState } from "../../types";
 import {
   getFileMeta,
@@ -423,76 +424,10 @@ export default function StudentLessonsPage() {
 
       {/* Written Lesson Reader Modal */}
       {readingLesson && (
-        <div className="mgmt-modal-overlay" onClick={() => setReadingLesson(null)}>
-          <div
-            className="mgmt-modal mgmt-modal--wide"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reader-modal-title"
-          >
-            <div className="mgmt-modal-header">
-              <div>
-                <span
-                  className="materials-type-badge materials-type-badge--written"
-                  style={{ marginBottom: "0.35rem" }}
-                >
-                  Written Lesson
-                </span>
-                <h2 id="reader-modal-title" className="mgmt-modal-title">{readingLesson.title}</h2>
-              </div>
-              <button
-                type="button"
-                className="mgmt-modal-close"
-                onClick={() => setReadingLesson(null)}
-                aria-label="Close reader modal"
-              >
-                ×
-              </button>
-            </div>
-            <div className="mgmt-form">
-              <div className="material-preview-context-grid">
-                <div className="material-preview-context-item">
-                  <span className="material-preview-context-label">Class</span>
-                  <span className="material-preview-context-val">
-                    {readingLesson.class_name} ({readingLesson.school_year_name})
-                  </span>
-                </div>
-                <div className="material-preview-context-item">
-                  <span className="material-preview-context-label">Module & Subject</span>
-                  <span className="material-preview-context-val">
-                    {readingLesson.module_title} · {readingLesson.subject_name || "General"}
-                  </span>
-                </div>
-                {readingLesson.teacher_name && (
-                  <div className="material-preview-context-item">
-                    <span className="material-preview-context-label">Teacher</span>
-                    <span className="material-preview-context-val">
-                      {readingLesson.teacher_name}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div
-                className="module-lesson-reader"
-                style={{ marginTop: "1.25rem", whiteSpace: "pre-wrap" }}
-              >
-                {readingLesson.content || "No content provided."}
-              </div>
-
-              <div className="mgmt-modal-actions" style={{ marginTop: "1.5rem" }}>
-                <button
-                  type="button"
-                  className="mgmt-btn mgmt-btn--ghost"
-                  onClick={() => setReadingLesson(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StudentLessonReaderModal
+          lesson={readingLesson}
+          onClose={() => setReadingLesson(null)}
+        />
       )}
 
       {/* File Material Details & Preview Modal */}
