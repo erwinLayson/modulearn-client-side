@@ -183,12 +183,12 @@ export const teachingModuleApi = {
 
   createLesson: (moduleId: string, payload: FormData) =>
     apiClient.post<{ data: ModuleLessonItem }>(`/modules/mine/${moduleId}/lessons`, payload, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     }),
 
   updateLesson: (moduleId: string, lessonId: string, payload: FormData) =>
     apiClient.put<{ data: ModuleLessonItem }>(`/modules/mine/${moduleId}/lessons/${lessonId}`, payload, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     }),
 
   deleteLesson: (moduleId: string, lessonId: string) =>

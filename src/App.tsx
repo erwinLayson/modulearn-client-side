@@ -18,6 +18,8 @@ import ManageUsers from "./pages/admin/ManageUsers";
 import ManageSchools from "./pages/admin/ManageSchools";
 import ManageModules from "./pages/admin/ManageModules";
 import MyModulesPage from "./pages/faculty/MyModulesPage";
+import LessonReaderPage from "./pages/faculty/LessonReaderPage";
+import DocumentViewerPage from "./pages/faculty/DocumentViewerPage";
 import ManageClassesAdmin from "./pages/admin/ManageClasses";
 import ManageSubjectsAdmin from "./pages/admin/ManageSubjects";
 import ManageSubjects from "./pages/school_admin/ManageSubjects";
@@ -136,6 +138,18 @@ export default function App() {
                   }
                 />
                 <Route path="modules" element={<ModulesRoute />} />
+                <Route
+                  path="modules/:moduleId/lessons/:lessonId/read"
+                  element={<ProtectedRoute allowedRoles={["faculty"]} />}
+                >
+                  <Route index element={<LessonReaderPage />} />
+                </Route>
+                <Route
+                  path="modules/:moduleId/lessons/:lessonId/preview"
+                  element={<ProtectedRoute allowedRoles={["faculty"]} />}
+                >
+                  <Route index element={<DocumentViewerPage />} />
+                </Route>
                 <Route path="subjects" element={<SubjectsRoute />} />
                 <Route
                   path="attendance-report"

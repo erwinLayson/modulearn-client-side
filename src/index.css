@@ -13,6 +13,11 @@
 @import "./styles/dashboard.css";
 @import "./styles/management.css";
 @import "./styles/learning-materials.css";
+@import "./styles/learning-materials-library.css";
+@import "./styles/assessment-library-table.css";
+@import "./styles/lesson-reader-page.css";
+@import "./styles/document-viewer-page.css";
+@import "./styles/student-lesson-reader.css";
 @import "./styles/tooltip.css";
 @import "./styles/feature.css";
 @import "./styles/buttons.css";
