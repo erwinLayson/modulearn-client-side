@@ -11,7 +11,11 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://server:7000",
+        target: "http://server:8000",
+        changeOrigin: true,
+      },
+      "/uploads": {
+        target: "http://server:8000",
         changeOrigin: true,
       },
     },
