@@ -40,6 +40,19 @@ if (!("ResizeObserver" in window)) {
     });
 }
 
+if (!("IntersectionObserver" in window)) {
+    class IntersectionObserverStub {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    }
+
+    Object.defineProperty(window, "IntersectionObserver", {
+        writable: true,
+        value: IntersectionObserverStub,
+    });
+}
+
 window.scrollTo = vi.fn();
 
 if (typeof URL.createObjectURL !== "function") {
