@@ -1,0 +1,1310 @@
+/* ==========================================================================
+   ModuLearn – Single Source of Truth Reader Design System
+   Unified UI styling for PDF, Word DOCX, Written Lessons & Document Previews
+   ========================================================================== */
+
+:root {
+  --reader-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --reader-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Default Light Theme */
+  --reader-bg: #f8fafc;
+  --reader-canvas-bg: #f1f5f9;
+  --reader-surface: #ffffff;
+  --reader-surface-elevated: #ffffff;
+  --reader-surface-muted: #f8fafc;
+  --reader-toolbar-bg: rgba(255, 255, 255, 0.95);
+  --reader-toolbar-border: #e2e8f0;
+  --reader-text: #0f172a;
+  --reader-text-muted: #64748b;
+  --reader-text-subtle: #94a3b8;
+  --reader-border: #e2e8f0;
+  --reader-border-strong: #cbd5e1;
+
+  --reader-primary: #2563eb;
+  --reader-primary-hover: #1d4ed8;
+  --reader-primary-light: #eff6ff;
+  --reader-primary-border: #bfdbfe;
+
+  --reader-btn-bg: #ffffff;
+  --reader-btn-border: #e2e8f0;
+  --reader-btn-hover: #f1f5f9;
+  --reader-btn-active: #e2e8f0;
+  --reader-btn-text: #334155;
+
+  --reader-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --reader-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --reader-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --reader-page-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  --reader-radius-sm: 0.375rem;
+  --reader-radius-md: 0.5rem;
+  --reader-radius-lg: 0.75rem;
+  --reader-radius-xl: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Themes: Sepia & Dark
+   -------------------------------------------------------------------------- */
+
+.unified-reader-theme--sepia {
+  --reader-bg: #f4ecd8;
+  --reader-canvas-bg: #eae0c8;
+  --reader-surface: #fdf6e3;
+  --reader-surface-elevated: #fefcf6;
+  --reader-surface-muted: #f4ecd8;
+  --reader-toolbar-bg: rgba(244, 236, 216, 0.95);
+  --reader-toolbar-border: #d8cca8;
+  --reader-text: #433422;
+  --reader-text-muted: #79664f;
+  --reader-text-subtle: #a08c75;
+  --reader-border: #d8cca8;
+  --reader-border-strong: #bfb087;
+
+  --reader-primary: #8b5cf6;
+  --reader-primary-hover: #7c3aed;
+  --reader-primary-light: #f3e8ff;
+  --reader-primary-border: #ddd6fe;
+
+  --reader-btn-bg: #fdf6e3;
+  --reader-btn-border: #d8cca8;
+  --reader-btn-hover: #eae0c8;
+  --reader-btn-active: #dfd4b9;
+  --reader-btn-text: #433422;
+
+  --reader-page-shadow: 0 4px 20px rgba(67, 52, 34, 0.12);
+}
+
+.unified-reader-theme--dark {
+  --reader-bg: #090d16;
+  --reader-canvas-bg: #0b1120;
+  --reader-surface: #1e293b;
+  --reader-surface-elevated: #243248;
+  --reader-surface-muted: #0f172a;
+  --reader-toolbar-bg: rgba(15, 23, 42, 0.95);
+  --reader-toolbar-border: #334155;
+  --reader-text: #f1f5f9;
+  --reader-text-muted: #94a3b8;
+  --reader-text-subtle: #64748b;
+  --reader-border: #334155;
+  --reader-border-strong: #475569;
+
+  --reader-primary: #3b82f6;
+  --reader-primary-hover: #60a5fa;
+  --reader-primary-light: rgba(59, 130, 246, 0.15);
+  --reader-primary-border: #2563eb;
+
+  --reader-btn-bg: #1e293b;
+  --reader-btn-border: #334155;
+  --reader-btn-hover: #334155;
+  --reader-btn-active: #475569;
+  --reader-btn-text: #e2e8f0;
+
+  --reader-page-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* --------------------------------------------------------------------------
+   Full-Screen Reader Overlay Layout
+   -------------------------------------------------------------------------- */
+
+.unified-reader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--reader-canvas-bg);
+  color: var(--reader-text);
+  font-family: var(--reader-font-sans);
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: unifiedReaderFadeIn 0.18s ease-out;
+}
+
+@keyframes unifiedReaderFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Top Document Toolbar (Single Source of Truth)
+   -------------------------------------------------------------------------- */
+
+.unified-reader-toolbar {
+  position: relative;
+  z-index: 1005;
+  height: 3.5rem;
+  min-height: 3.5rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  background-color: var(--reader-toolbar-bg);
+  border-bottom: 1px solid var(--reader-toolbar-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  gap: 0.75rem;
+  box-sizing: border-box;
+}
+
+/* Sticky Reading Progress Line */
+.unified-reader-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2.5px;
+  background-color: var(--reader-primary);
+  transition: width 0.15s ease-out;
+  z-index: 1006;
+}
+
+/* Toolbar Left Section */
+.unified-reader-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* Standardized Back Button */
+.unified-reader-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  background-color: var(--reader-btn-bg);
+  border: 1px solid var(--reader-btn-border);
+  border-radius: var(--reader-radius-md);
+  color: var(--reader-btn-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.unified-reader-back-btn:hover {
+  background-color: var(--reader-btn-hover);
+  border-color: var(--reader-border-strong);
+}
+
+.unified-reader-back-btn:focus-visible {
+  outline: 2px solid var(--reader-primary);
+  outline-offset: 1px;
+}
+
+/* Semantic Document Type Badge */
+.unified-reader-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--reader-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.unified-reader-badge--pdf {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.unified-reader-badge--word {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.unified-reader-badge--written {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.unified-reader-badge--file {
+  background-color: #e2e8f0;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+/* Document Title & Subtitle Block */
+.unified-reader-doc-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.unified-reader-doc-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--reader-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.unified-reader-doc-subtitle {
+  font-size: 0.75rem;
+  color: var(--reader-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Toolbar Center Section */
+.unified-reader-toolbar__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Toolbar Right Section */
+.unified-reader-toolbar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* Standardized Button Groups */
+.unified-reader-btn-group {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--reader-surface);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--reader-radius-md);
+  padding: 0.125rem;
+  box-shadow: var(--reader-shadow-sm);
+}
+
+.unified-reader-btn-group .unified-reader-tool-btn {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--reader-radius-sm);
+}
+
+/* Standardized Icon & Tool Buttons */
+.unified-reader-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  background-color: var(--reader-surface);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--reader-radius-md);
+  color: var(--reader-btn-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--reader-shadow-sm);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.unified-reader-tool-btn:hover:not(:disabled) {
+  background-color: var(--reader-btn-hover);
+  border-color: var(--reader-border-strong);
+  color: var(--reader-text);
+}
+
+.unified-reader-tool-btn:active:not(:disabled) {
+  background-color: var(--reader-btn-active);
+}
+
+.unified-reader-tool-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.unified-reader-tool-btn:focus-visible {
+  outline: 2px solid var(--reader-primary);
+  outline-offset: 1px;
+}
+
+.unified-reader-tool-btn--active {
+  background-color: var(--reader-primary-light);
+  border-color: var(--reader-primary-border);
+  color: var(--reader-primary);
+}
+
+.unified-reader-tool-btn--primary {
+  background-color: var(--reader-primary);
+  border-color: var(--reader-primary);
+  color: #ffffff;
+}
+
+.unified-reader-tool-btn--primary:hover:not(:disabled) {
+  background-color: var(--reader-primary-hover);
+  border-color: var(--reader-primary-hover);
+  color: #ffffff;
+}
+
+/* Page Indicator & Navigation Input */
+.unified-reader-page-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--reader-text-muted);
+  padding: 0 0.4rem;
+  white-space: nowrap;
+}
+
+.unified-reader-page-input {
+  width: 2.5rem;
+  height: 1.75rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--reader-text);
+  background-color: var(--reader-surface);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--reader-radius-sm);
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+}
+
+.unified-reader-page-input:focus {
+  outline: 2px solid var(--reader-primary);
+  outline-offset: 0;
+  border-color: var(--reader-primary);
+}
+
+/* Zoom Indicator */
+.unified-reader-zoom-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--reader-text-muted);
+  min-width: 2.75rem;
+  text-align: center;
+}
+
+/* Reading Progress Chip */
+.unified-reader-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  background-color: var(--reader-surface);
+  border: 1px solid var(--reader-border);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--reader-primary);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Reading Preferences Popover Menu
+   -------------------------------------------------------------------------- */
+
+.unified-reader-popover-trigger-wrap {
+  position: relative;
+}
+
+.unified-reader-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 1020;
+  width: 260px;
+  background-color: var(--reader-surface-elevated);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--reader-radius-lg);
+  padding: 1rem;
+  box-shadow: var(--reader-shadow-lg);
+  animation: unifiedPopoverFadeIn 0.15s ease-out;
+}
+
+@keyframes unifiedPopoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.unified-reader-popover-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--reader-text-muted);
+}
+
+.unified-reader-popover-section {
+  margin-bottom: 0.875rem;
+}
+
+.unified-reader-popover-section:last-child {
+  margin-bottom: 0;
+}
+
+.unified-reader-popover-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--reader-text);
+  margin-bottom: 0.35rem;
+}
+
+.unified-reader-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.unified-reader-theme-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: var(--reader-radius-md);
+  border: 1px solid var(--reader-border);
+  background: var(--reader-surface);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--reader-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.unified-reader-theme-btn:hover {
+  border-color: var(--reader-primary);
+}
+
+.unified-reader-theme-btn--active {
+  border-color: var(--reader-primary);
+  outline: 2px solid var(--reader-primary);
+  outline-offset: 1px;
+}
+
+.unified-reader-theme-preview {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.unified-reader-theme-preview--light {
+  background-color: #ffffff;
+}
+
+.unified-reader-theme-preview--sepia {
+  background-color: #f4ecd8;
+}
+
+.unified-reader-theme-preview--dark {
+  background-color: #1e293b;
+}
+
+/* --------------------------------------------------------------------------
+   Unified Document Viewport & Sidebars
+   -------------------------------------------------------------------------- */
+
+.unified-reader-viewport {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: calc(100vh - 3.5rem);
+}
+
+/* --------------------------------------------------------------------------
+   Left Navigation Drawer (TOC / Thumbnails)
+   -------------------------------------------------------------------------- */
+
+.unified-reader-nav-drawer {
+  width: 280px;
+  min-width: 280px;
+  height: 100%;
+  background-color: var(--reader-surface);
+  border-right: 1px solid var(--reader-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 1010;
+  box-shadow: var(--reader-shadow-md);
+  transition: transform 0.22s ease-in-out, margin-left 0.22s ease-in-out;
+}
+
+.unified-reader-nav-drawer--closed {
+  margin-left: -280px;
+}
+
+.unified-reader-drawer-header {
+  height: 3rem;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--reader-border);
+  background-color: var(--reader-surface-muted);
+}
+
+.unified-reader-drawer-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--reader-text);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.unified-reader-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  background: transparent;
+  color: var(--reader-text-muted);
+  border-radius: var(--reader-radius-sm);
+  cursor: pointer;
+}
+
+.unified-reader-drawer-close:hover {
+  background-color: var(--reader-btn-hover);
+  color: var(--reader-text);
+}
+
+.unified-reader-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+/* Table of Contents List Items */
+.unified-reader-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.unified-reader-toc-item {
+  display: block;
+}
+
+.unified-reader-toc-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--reader-radius-md);
+  font-size: 0.8125rem;
+  color: var(--reader-text);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.unified-reader-toc-link:hover {
+  background-color: var(--reader-btn-hover);
+  color: var(--reader-primary);
+}
+
+.unified-reader-toc-link--active {
+  background-color: var(--reader-primary-light);
+  color: var(--reader-primary);
+  font-weight: 600;
+}
+
+.unified-reader-toc-link--level-2 {
+  padding-left: 1.25rem;
+  font-size: 0.75rem;
+  color: var(--reader-text-muted);
+}
+
+.unified-reader-toc-link--level-3 {
+  padding-left: 1.85rem;
+  font-size: 0.725rem;
+  color: var(--reader-text-muted);
+}
+
+/* PDF Page Thumbnails */
+.unified-reader-thumbnails-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.unified-reader-thumbnail-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border: 2px solid transparent;
+  border-radius: var(--reader-radius-md);
+  background-color: var(--reader-surface-elevated);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--reader-shadow-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.unified-reader-thumbnail-card:hover {
+  border-color: var(--reader-border-strong);
+  transform: translateY(-1px);
+}
+
+.unified-reader-thumbnail-card--active {
+  border-color: var(--reader-primary);
+  box-shadow: 0 0 0 1px var(--reader-primary);
+}
+
+.unified-reader-thumbnail-preview {
+  width: 100%;
+  height: 120px;
+  background-color: #ffffff;
+  border: 1px solid var(--reader-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--reader-radius-sm);
+}
+
+.unified-reader-thumbnail-preview canvas,
+.unified-reader-thumbnail-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.unified-reader-thumbnail-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--reader-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Right Information Drawer (Universal Metadata SSOT)
+   -------------------------------------------------------------------------- */
+
+.unified-reader-info-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  background-color: var(--reader-surface);
+  border-left: 1px solid var(--reader-border);
+  z-index: 1015;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.22s ease-in-out;
+}
+
+.unified-reader-info-drawer--open {
+  transform: translateX(0);
+}
+
+.unified-reader-info-section {
+  padding: 1rem;
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.unified-reader-info-section:last-child {
+  border-bottom: none;
+}
+
+.unified-reader-info-section-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--reader-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.unified-reader-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.625rem;
+}
+
+.unified-reader-meta-item:last-child {
+  margin-bottom: 0;
+}
+
+.unified-reader-meta-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--reader-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.unified-reader-meta-value {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--reader-text);
+  word-break: break-word;
+}
+
+/* Teacher Profile Row */
+.unified-reader-teacher-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.unified-reader-teacher-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background-color: var(--reader-primary-light);
+  color: var(--reader-primary);
+  border: 1px solid var(--reader-primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.unified-reader-teacher-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.unified-reader-teacher-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--reader-text);
+}
+
+.unified-reader-teacher-role {
+  font-size: 0.6875rem;
+  color: var(--reader-text-muted);
+}
+
+/* Notes & Instructions Box */
+.unified-reader-notes-box {
+  background-color: var(--reader-surface-muted);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--reader-radius-md);
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--reader-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* --------------------------------------------------------------------------
+   Central Document Canvas (Single Source of Truth)
+   -------------------------------------------------------------------------- */
+
+.unified-reader-canvas {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  background-color: var(--reader-canvas-bg);
+  padding: 1.5rem 1rem 3rem 1rem;
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+}
+
+/* --------------------------------------------------------------------------
+   Document Content Renderers:
+   1. Written Lesson Digital Textbook
+   -------------------------------------------------------------------------- */
+
+.unified-reader-textbook-container {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--reader-surface);
+  border-radius: var(--reader-radius-lg);
+  box-shadow: var(--reader-page-shadow);
+  border: 1px solid var(--reader-border);
+  padding: 2.5rem 3rem;
+  box-sizing: border-box;
+  margin: 0 auto;
+  transition: all 0.2s ease;
+}
+
+/* Typography Sizing Modes */
+.unified-reader-font--sm .unified-reader-textbook-container {
+  font-size: 0.9375rem;
+}
+
+.unified-reader-font--md .unified-reader-textbook-container {
+  font-size: 1.125rem; /* ~18px textbook baseline */
+}
+
+.unified-reader-font--lg .unified-reader-textbook-container {
+  font-size: 1.25rem;
+}
+
+/* Line Spacing Modes */
+.unified-reader-spacing--compact .unified-reader-textbook-container {
+  line-height: 1.5;
+}
+
+.unified-reader-spacing--normal .unified-reader-textbook-container {
+  line-height: 1.8;
+}
+
+.unified-reader-spacing--relaxed .unified-reader-textbook-container {
+  line-height: 2.1;
+}
+
+/* Reading Textbook Header */
+.unified-reader-textbook-header {
+  border-bottom: 1px solid var(--reader-border);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.unified-reader-textbook-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--reader-text);
+  line-height: 1.2;
+}
+
+.unified-reader-textbook-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--reader-text-muted);
+}
+
+/* Textbook Body Content Blocks */
+.unified-reader-content {
+  color: var(--reader-text);
+}
+
+.unified-reader-content h1,
+.unified-reader-content h2,
+.unified-reader-content h3 {
+  color: var(--reader-text);
+  font-weight: 700;
+  scroll-margin-top: 4.5rem;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.unified-reader-content h1 {
+  font-size: 1.875rem;
+}
+
+.unified-reader-content h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--reader-border);
+  padding-bottom: 0.35rem;
+}
+
+.unified-reader-content h3 {
+  font-size: 1.25rem;
+}
+
+.unified-reader-content p {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+.unified-reader-content ul,
+.unified-reader-content ol {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  padding-left: 1.75rem;
+}
+
+.unified-reader-content li {
+  margin-bottom: 0.4rem;
+}
+
+.unified-reader-content blockquote {
+  margin: 1.25rem 0;
+  padding: 0.75rem 1.25rem;
+  border-left: 4px solid var(--reader-primary);
+  background-color: var(--reader-surface-muted);
+  border-radius: 0 var(--reader-radius-md) var(--reader-radius-md) 0;
+  font-style: italic;
+}
+
+.unified-reader-content code {
+  font-family: var(--reader-font-mono);
+  font-size: 0.875em;
+  background-color: var(--reader-surface-muted);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--reader-radius-sm);
+  padding: 0.15em 0.35em;
+}
+
+.unified-reader-content pre {
+  font-family: var(--reader-font-mono);
+  font-size: 0.875em;
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-radius: var(--reader-radius-md);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+}
+
+.unified-reader-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+.unified-reader-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.unified-reader-content th,
+.unified-reader-content td {
+  border: 1px solid var(--reader-border);
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+
+.unified-reader-content th {
+  background-color: var(--reader-surface-muted);
+  font-weight: 600;
+}
+
+/* Callout Boxes: Notes, Examples */
+.unified-reader-callout {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: var(--reader-radius-md);
+  border: 1px solid transparent;
+}
+
+.unified-reader-callout--note {
+  background-color: var(--reader-primary-light);
+  border-color: var(--reader-primary-border);
+  color: var(--reader-text);
+}
+
+.unified-reader-callout--example {
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #064e3b;
+}
+
+.unified-reader-callout-title {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* --------------------------------------------------------------------------
+   Document Content Renderers:
+   2. PDF Document Pages (PDF.js Canvas)
+   -------------------------------------------------------------------------- */
+
+.unified-reader-pdf-pages-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.unified-reader-pdf-page-card {
+  position: relative;
+  background-color: #ffffff;
+  box-shadow: var(--reader-page-shadow);
+  border-radius: var(--reader-radius-sm);
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+.unified-reader-pdf-page-card canvas {
+  display: block;
+}
+
+.unified-reader-pdf-page-number {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.75rem;
+  background-color: rgba(15, 23, 42, 0.65);
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Document Content Renderers:
+   3. Word DOCX Document Pages (docx-preview)
+   -------------------------------------------------------------------------- */
+
+.unified-reader-docx-pages-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Styling docx-preview wrapper to match single source of truth */
+.unified-reader-docx-pages-wrap .docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 1.5rem !important;
+}
+
+.unified-reader-docx-pages-wrap .docx-wrapper > section.docx,
+.unified-reader-docx-pages-wrap section.docx {
+  background-color: #ffffff !important;
+  box-shadow: var(--reader-page-shadow) !important;
+  border-radius: var(--reader-radius-sm) !important;
+  margin-bottom: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* --------------------------------------------------------------------------
+   Document Content Renderers:
+   4. Generic File / Image Preview
+   -------------------------------------------------------------------------- */
+
+.unified-reader-file-preview-card {
+  width: 100%;
+  max-width: 680px;
+  background-color: var(--reader-surface);
+  border-radius: var(--reader-radius-lg);
+  border: 1px solid var(--reader-border);
+  box-shadow: var(--reader-page-shadow);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: auto;
+}
+
+.unified-reader-file-preview-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--reader-radius-xl);
+  background-color: var(--reader-surface-muted);
+  border: 1px solid var(--reader-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  color: var(--reader-primary);
+}
+
+.unified-reader-file-preview-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--reader-text);
+}
+
+.unified-reader-file-preview-meta {
+  font-size: 0.8125rem;
+  color: var(--reader-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.unified-reader-image-preview-wrap {
+  max-width: 900px;
+  background-color: var(--reader-surface);
+  border-radius: var(--reader-radius-lg);
+  border: 1px solid var(--reader-border);
+  box-shadow: var(--reader-page-shadow);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+}
+
+.unified-reader-image-preview-wrap img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: var(--reader-radius-md);
+}
+
+/* --------------------------------------------------------------------------
+   Loading & Error States
+   -------------------------------------------------------------------------- */
+
+.unified-reader-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: var(--reader-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.unified-reader-spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid var(--reader-border);
+  border-top-color: var(--reader-primary);
+  border-radius: 9999px;
+  animation: unifiedSpin 0.75s linear infinite;
+}
+
+@keyframes unifiedSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.unified-reader-error-card {
+  max-width: 480px;
+  background-color: var(--reader-surface);
+  border: 1px solid #fecaca;
+  border-radius: var(--reader-radius-lg);
+  box-shadow: var(--reader-shadow-md);
+  padding: 2rem;
+  text-align: center;
+  margin: auto;
+}
+
+.unified-reader-error-title {
+  color: #b91c1c;
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.unified-reader-error-msg {
+  color: var(--reader-text-muted);
+  font-size: 0.8125rem;
+  margin: 0 0 1.5rem 0;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Layout (Desktop, Tablet, Mobile)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .unified-reader-toolbar {
+    padding: 0 0.75rem;
+  }
+
+  .unified-reader-doc-info {
+    max-width: 180px;
+  }
+
+  .unified-reader-nav-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+  }
+
+  .unified-reader-textbook-container {
+    padding: 1.5rem;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .unified-reader-toolbar {
+    height: 3.25rem;
+  }
+
+  .unified-reader-doc-info {
+    max-width: 130px;
+  }
+
+  .unified-reader-back-btn span,
+  .unified-reader-tool-btn span {
+    display: none;
+  }
+
+  .unified-reader-info-drawer {
+    width: 100%;
+  }
+
+  .unified-reader-nav-drawer {
+    width: 100%;
+  }
+
+  .unified-reader-textbook-container {
+    padding: 1.25rem 1rem;
+  }
+
+  .unified-reader-textbook-title {
+    font-size: 1.5rem;
+  }
+}
