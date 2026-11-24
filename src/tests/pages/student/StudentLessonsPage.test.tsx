@@ -386,7 +386,7 @@ describe("StudentLessonsPage – Learning Materials Table UI", () => {
     expect(screen.queryByTestId("student-docx-reader-modal")).not.toBeInTheDocument();
 
     expect(
-      within(dialog).getByText("Extract and run npm install.")
+      within(dialog).getAllByText("Extract and run npm install.")[0]
     ).toBeInTheDocument();
     expect(
       within(dialog).getByRole("link", { name: "Download Original File" })
